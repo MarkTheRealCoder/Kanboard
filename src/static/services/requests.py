@@ -71,7 +71,7 @@ class RequestHandler:
         Forwards a request to the appropriate view.
 
         :param request: HttpRequest - The request object.
-        :param args: tuple - Additional arguments to pass to the view.
+        :param kwargs: tuple - Additional arguments to pass to the view.
         :return: HttpResponse - The response from the view or an error message.
         """
 

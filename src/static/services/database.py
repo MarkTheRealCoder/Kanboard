@@ -1,8 +1,12 @@
 import re
 import sqlite3
-from sqlite3 import Connection
 
-from _ctypes import FormatError
+
+class _FormatError(Exception):
+    """
+    Represents an error that occurs if the desired format cannot be implemented.
+    """
+    pass
 
 
 class _DatabaseError(Exception):
@@ -32,21 +36,39 @@ class DBHybridTable:
         :param table2: str | DBHybridTable - The secondary table or another instance of DBHybridTable.
         :param condition: str - The SQL condition that defines how the two tables should be joined.
         """
-        self.___complex: list[bool] = [not isinstance(table1, str), not isinstance(table2, str)]
-        self.___table_name: str = table1 if not self.___complex[0] else f"({table1.table()})"
-        self.___join_table: str = table2 if not self.___complex[1] else f"({table2.table()})"
+        self.___is_complex_table1: bool = not isinstance(table1, str)
+        self.___is_complex_table2: bool = not isinstance(table2, str)
+
+        self._table_name: str = self._get_table_name(table1, self.___is_complex_table1)
+        self._join_table_name: str = self._get_table_name(table2, self.___is_complex_table2)
         self.___condition: str = condition
+
+    def _get_table_name(self, table: str or 'DBHybridTable', is_complex: bool) -> str:
+        """
+        Returns the table name, handling complex table cases.
+
+        :param table: str | DBHybridTable - The table to get the name for.
+        :param is_complex: bool - Whether the table is a complex table.
+        :return: str - The table name.
+        """
+        if not table:
+            raise _FormatError("Table name cannot be empty or `None`")
+
+        return f"({table.table()})" if is_complex else table
 
     def set_app(self, app_name: str):
         """
-        Sets the application name for the table.
+        Sets the application name for the tables.
 
         :param app_name: str - The name of the application.
         """
-        if not self.___complex[0]:
-            self.___table_name = f"{app_name}_{self.___table_name}"
-        if not self.___complex[1]:
-            self.___join_table = f"{app_name}_{self.___join_table}"
+        if not app_name:
+            raise _FormatError("Application name cannot be empty or `None`")
+
+        if not self.___is_complex_table1:
+            self._table_name = f"{app_name}_{self._table_name}"
+        if not self.___is_complex_table2:
+            self._join_table_name = f"{app_name}_{self._join_table_name}"
 
     def table(self) -> str:
         """
@@ -54,7 +76,7 @@ class DBHybridTable:
 
         :return: str - A string representing the SQL JOIN clause.
         """
-        return f"{self.___table_name} JOIN {self.___join_table} ON {self.___condition}"
+        return f"{self._table_name} JOIN {self._join_table_name} ON {self.___condition}"
 
     def join(self, table: str or 'DBHybridTable', condition: str) -> 'DBHybridTable':
         """
@@ -83,6 +105,9 @@ class _WhereCondition:
 
         :param condition: str - A string representing the condition with placeholders for arguments in the form of PARAM(n).
         """
+        if not condition:
+            raise _FormatError("Condition string cannot be empty or `None`")
+
         self.___condition: str = condition
 
     def get_condition(self) -> str:
@@ -97,7 +122,7 @@ class _WhereCondition:
         """
         Replaces the placeholders in the condition string with the provided arguments.
 
-        :param args: tuple - The arguments to replace the placeholders.
+        :param kwargs: tuple - The arguments to replace the placeholders.
         :return: str - The condition string with placeholders replaced by the provided arguments.
         """
         return self.___parse_condition(**kwargs)
@@ -106,14 +131,14 @@ class _WhereCondition:
         """
         Internal method to replace placeholders in the condition string with the provided arguments.
 
-        :param args: tuple - The arguments to replace the placeholders.
+        :param kwargs: tuple - The arguments to replace the placeholders.
         :return: str - The condition string with placeholders replaced by the provided arguments.
         :raises FormatError: If an invalid argument name is encountered.
         """
         condition_copy = self.___condition
         for i in re.findall("PARAM\\(([A-Za-z_]+[A-Za-z0-9_]*)\\)", condition_copy):
             if i not in kwargs.keys():
-                raise FormatError(f"Invalid argument: {i} is not part of the function arguments")
+                raise _FormatError(f"Invalid argument: {i} is not part of the function arguments")
             condition_copy = condition_copy.replace(f"PARAM({i})", str(kwargs.get(i)))
         return condition_copy
 
@@ -138,6 +163,9 @@ class _DBQuery:
 
         :param query: str - The query string to add.
         """
+        if not query:
+            raise _FormatError("Query string cannot be empty or `None`")
+
         self.___query += (query + "\n")
 
     def select(self, *args):
@@ -149,7 +177,27 @@ class _DBQuery:
         arguments: list[str] = [str(i) for i in args]
         self.___add("SELECT " + ", ".join(arguments))
 
-    def fromTable(self, table: str or DBHybridTable):
+    def insert(self, table: str or DBHybridTable, *args):
+        """
+        Adds an INSERT clause to the query.
+
+        :param table: str | DBHybridTable - The table to insert into.
+        :param args: tuple - The columns to insert.
+        """
+        arguments: list[str] = [str(i) for i in args]
+        table_name = table if isinstance(table, str) else table.table()
+        self.___add(f"INSERT INTO {table_name} " + ", ".join(arguments))
+
+    def values(self, *args):
+        """
+        Adds a VALUES clause to the query.
+
+        :param args: tuple - The values to insert.
+        """
+        arguments: list[str] = [str(i) for i in args]
+        self.___add("VALUES " + ", ".join(arguments))
+
+    def from_table(self, table: str or DBHybridTable):
         """
         Adds a FROM clause to the query.
 
@@ -197,7 +245,7 @@ class _DBQuery:
 
         :param limit: int - The maximum number of rows to return.
         """
-        self.___add(str(limit))
+        self.___add("LIMIT " + str(limit))
 
     def offset(self, offset: int):
         """
@@ -205,7 +253,7 @@ class _DBQuery:
 
         :param offset: int - The number of rows to skip before starting to return rows.
         """
-        self.___add(str(offset))
+        self.___add("OFFSET " + str(offset))
 
     def complex(self, value: str):
         """
@@ -219,12 +267,13 @@ class _DBQuery:
         """
         Returns the final query string with placeholders replaced by the provided arguments.
 
-        :param args: tuple - The arguments to replace the placeholders.
+        :param kwargs: tuple - The arguments to replace the placeholders.
         :return: str - The final query string.
         :raises FormatError: If the query string is empty.
         """
         if not self.___query:
-            raise FormatError("Empty query")
+            raise _FormatError("Empty query")
+
         return _WhereCondition(self.___query).condition(**kwargs)
 
 
@@ -275,7 +324,7 @@ class DBRequestBuilder:
         """
         Returns the final query string with placeholders replaced by the provided arguments.
 
-        :param args: tuple - The arguments to replace the placeholders.
+        :param kwargs: tuple - The arguments to replace the placeholders.
         :return: str - The final query string.
         """
         return self.___query.query(**kwargs)
@@ -290,18 +339,52 @@ class DBRequestBuilder:
         self.___query.select(*args)
         return self
 
-    def fromTable(self, table: str or DBHybridTable) -> 'DBRequestBuilder':
+    def insert(self, table: str or DBHybridTable, *args) -> 'DBRequestBuilder':
+        """
+        Adds an INSERT clause to the query.
+
+        :param table: str | DBHybridTable - The table to insert into.
+        :param args: tuple - The columns to insert.
+        :return: DBRequestBuilder - The DBRequestBuilder instance for chaining.
+        """
+        if not table:
+            raise _FormatError("Table name cannot be empty or `None`")
+
+        if not args:
+            raise _FormatError("Columns to insert cannot be empty or `None`")
+
+        if isinstance(table, DBHybridTable):
+            table.set_app(self.___app_name)
+        else:
+            table = f"{self.___app_name}_{table}"
+        self.___query.insert(table, *args)
+        return self
+
+    def values(self, *args) -> 'DBRequestBuilder':
+        """
+        Adds a VALUES clause to the query.
+
+        :param args: tuple - The values to insert.
+        :return: DBRequestBuilder - The DBRequestBuilder instance for chaining.
+        """
+        self.___query.values(*args)
+        return self
+
+    def from_table(self, table: str or DBHybridTable) -> 'DBRequestBuilder':
         """
         Adds a FROM clause to the query.
 
         :param table: str | DBHybridTable - The table to select from.
         :return: DBRequestBuilder - The DBRequestBuilder instance for chaining.
         """
+        if not table:
+            raise _FormatError("Table name cannot be empty or `None`")
+
         if isinstance(table, DBHybridTable):
             table.set_app(self.___app_name)
         else:
             table = f"{self.___app_name}_{table}"
-        self.___query.fromTable(table)
+        self.___query.from_table(table)
         return self
 
     def where(self, condition: str) -> 'DBRequestBuilder':
@@ -395,15 +478,12 @@ class _DBServices:
         :param query: str - The query string to execute.
         :return: Any - The result of the query execution.
         """
-        print(self.___db_path)
         value = None
         with sqlite3.connect(self.___db_path) as conn:
             try:
                 value = conn.cursor().execute(query).fetchall()
             except sqlite3.Error as e:
                 raise _DatabaseError(f"An error occurred: {e}")
-        if value == []:
-            raise _DatabaseError("No results found.")
+        #if not value:
+        #    raise _DatabaseError("No results found.")
         return value
-
-
