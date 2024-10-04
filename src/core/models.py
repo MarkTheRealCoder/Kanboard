@@ -11,8 +11,7 @@ class Board(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField()
     image = models.ImageField(width_field=100, height_field=100)
-
-    created = models.DateTimeField()
+    creation_date = models.DateTimeField()
 
     def __str__(self):
         return self.name
