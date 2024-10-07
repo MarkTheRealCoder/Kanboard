@@ -1,7 +1,7 @@
 import unittest
 from unittest import TestCase
 
-from database import DBRequestBuilder, DBHybridTable, _FormatError
+from database import DBRequestBuilder, DBHybridTable, _FormatError, _meta_model as meta_model
 
 
 class TestDBHybridTable(TestCase):
@@ -16,58 +16,22 @@ class TestDBHybridTable(TestCase):
         self.table_with_mixed_inner_tables = DBHybridTable("table_1", self.inner_table_2, condition)
         self.table_with_only_inner_tables = DBHybridTable(self.inner_table_1, self.inner_table_2, condition)
 
-    def tearDown(self):
-        pass
-
-    def test_set_app_with_appname_empty(self):
-        self.assertRaises(_FormatError, lambda: self.table_with_strings.set_app(""))
-
-    def test_set_app_with_strings_check_table_name(self):
-        actual = "myapp_table_1"
-        self.table_with_strings.set_app("myapp")
-        self.assertEqual(actual, self.table_with_strings._table_name)
-
-    def test_set_app_with_strings_check_join_table_name(self):
-        actual = "myapp_table_2"
-        self.table_with_strings.set_app("myapp")
-        self.assertEqual(actual, self.table_with_strings._join_table_name)
-
-    def test_set_app_with_mixed_mocks_check_table_name(self):
-        actual = "myapp_table_1"
-        self.table_with_mixed_inner_tables.set_app("myapp")
-        self.assertEqual(actual, self.table_with_mixed_inner_tables._table_name)
-
-    def test_set_app_with_mixed_mocks_check_join_table_name(self):
-        actual = "(inner_table_3 JOIN inner_table_4 ON id=1)"
-        self.table_with_mixed_inner_tables.set_app("myapp")
-        self.assertEqual(actual, self.table_with_mixed_inner_tables._join_table_name)
-
-    def test_set_app_with_only_mocks_check_table_name(self):
-        actual = "(inner_table_1 JOIN inner_table_2 ON id=1)"
-        self.table_with_only_inner_tables.set_app("myapp")
-        self.assertEqual(actual, self.table_with_only_inner_tables._table_name)
-
-    def test_set_app_with_only_mocks_check_join_table_name(self):
-        actual = "(inner_table_3 JOIN inner_table_4 ON id=1)"
-        self.table_with_only_inner_tables.set_app("myapp")
-        self.assertEqual(actual, self.table_with_only_inner_tables._join_table_name)
-
     def test_init_with_empty_string(self):
         self.assertRaises(_FormatError, lambda: DBHybridTable("", "table_2", "id=1"))
 
     def test_table(self):
-        actual = "table_1 JOIN (inner_table_3 JOIN inner_table_4 ON id=1) ON id=1"
+        actual = f"{meta_model("table_1")} JOIN ({meta_model("inner_table_3")} JOIN {meta_model("inner_table_4")} ON id=1) ON id=1"
         self.assertEqual(actual, self.table_with_mixed_inner_tables.table())
 
     def test_join(self):
-        actual = "(table_1 JOIN table_2 ON id=1) JOIN (table_1 JOIN table_2 ON id=1) ON id=2"
+        actual = f"({meta_model("table_1")} JOIN {meta_model("table_2")} ON id=1) JOIN ({meta_model("table_1")} JOIN {meta_model("table_2")} ON id=1) ON id=2"
         self.assertEqual(actual, self.table_with_strings.join(self.table_with_strings, "id=2").table())
 
 
 class DBRequestBuilderTest(unittest.TestCase):
 
     def setUp(self):
-        self.builder: DBRequestBuilder = DBRequestBuilder("testapp", "test", "Error message")
+        self.builder: DBRequestBuilder = DBRequestBuilder("test", "Error message")
         self.params = {
             "a": "name",
             "b": "id"
@@ -95,7 +59,7 @@ class DBRequestBuilderTest(unittest.TestCase):
 
     def test_insert(self):
         self.builder.insert("citizens", "name", "age")
-        self.assertEqual("INSERT INTO testapp_citizens name, age\n", self.builder.query())
+        self.assertEqual("INSERT INTO " + meta_model("citizens") + " name, age\n", self.builder.query())
 
     def test_insert_with_empty_string(self):
         self.assertRaises(_FormatError, lambda: self.builder.insert(""))
@@ -104,7 +68,7 @@ class DBRequestBuilderTest(unittest.TestCase):
         self.assertRaises(_FormatError, lambda: self.builder.insert("citizens"))
 
     def test_insert_with_hybrid_table(self):
-        actual = "INSERT INTO testapp_citizens JOIN testapp_cars ON citizens_id=1 name, age\n"
+        actual = "INSERT INTO " + meta_model("citizens") + " JOIN " + meta_model("cars") + " ON citizens_id=1 name, age\n"
         table = DBHybridTable("citizens", "cars", "citizens_id=1")
         self.builder.insert(table, "name", "age")
         self.assertEqual(actual, self.builder.query())
@@ -116,7 +80,7 @@ class DBRequestBuilderTest(unittest.TestCase):
     def test_from_table(self):
         table = DBHybridTable("citizens", "cars", "citizens_id=1")
         self.builder.from_table(table)
-        self.assertEqual("FROM testapp_citizens JOIN testapp_cars ON citizens_id=1\n", self.builder.query())
+        self.assertEqual("FROM " + meta_model("citizens") + " JOIN " + meta_model("cars") + " ON citizens_id=1\n", self.builder.query())
 
     def test_from_table_with_empty_table(self):
         self.assertRaises(_FormatError, lambda: self.builder.from_table(""))

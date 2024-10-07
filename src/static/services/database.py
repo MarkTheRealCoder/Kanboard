@@ -1,6 +1,11 @@
 import re
 import sqlite3
 
+def _meta_model(table: str):
+    """
+    Returns a formatted table name that can be easily parsed to generate correct SQL queries' elements.
+    """
+    return f"<table:{table}>"
 
 class _FormatError(Exception):
     """
@@ -14,6 +19,59 @@ class _DatabaseError(Exception):
     Represents an error that occurs during database operations.
     """
     pass
+
+
+class _ModelError(_DatabaseError):
+    """
+    Represents an error that occurs if the model is not found.
+    """
+    pass
+
+
+class DBHybridField:
+    """
+    Represents a parameter in a SQL query that can be used to substitute values dynamically.
+    :param table: str - The name of the table.
+    :param field: str - The name of the parameter.
+
+    This class translates many python comparison operations to SQL comparison operations:\n
+    - == translates to = or IS NULL if the value is None
+    - != translates to != or IS NOT NULL if the value is None
+    - < translates to <
+    - <= translates to <=
+    - > translates to >
+    - >= translates to >=
+
+    Example:
+        ```field = DBHybridField("table", "field")```\n
+        ```print(field == 10) # Output: table.field = 10```
+    """
+    def __init__(self, table: int, field: int):
+        self.___field = _meta_model(table) + "." + field
+
+    def __str__(self):
+        return self.___field
+
+    def __repr__(self):
+        return self.___field
+
+    def __eq__(self, value):
+        return f"{self.___field} = {str(value)}" if value is not None else f"{self.___field} IS NULL"
+
+    def __ne__(self, value):
+        return f"{self.___field} != {str(value)}" if value is not None else f"{self.___field} IS NOT NULL"
+
+    def __lt__(self, value):
+        return f"{self.___field} < {str(value)}"
+
+    def __le__(self, value):
+        return f"{self.___field} <= {str(value)}"
+
+    def __gt__(self, value):
+        return f"{self.___field} > {str(value)}"
+
+    def __ge__(self, value):
+        return f"{self.___field} >= {str(value)}"
 
 
 class DBHybridTable:
@@ -54,21 +112,7 @@ class DBHybridTable:
         if not table:
             raise _FormatError("Table name cannot be empty or `None`")
 
-        return f"({table.table()})" if is_complex else table
-
-    def set_app(self, app_name: str):
-        """
-        Sets the application name for the tables.
-
-        :param app_name: str - The name of the application.
-        """
-        if not app_name:
-            raise _FormatError("Application name cannot be empty or `None`")
-
-        if not self.___is_complex_table1:
-            self._table_name = f"{app_name}_{self._table_name}"
-        if not self.___is_complex_table2:
-            self._join_table_name = f"{app_name}_{self._join_table_name}"
+        return f"({table.table()})" if is_complex else _meta_model(table)
 
     def table(self) -> str:
         """
@@ -293,13 +337,12 @@ class DBRequestBuilder:
 
     :tip: The query method returns a WhereCondition object that can be used to replace the arguments in the condition with the values passed to the condition method.
     """
-    def __init__(self, app_name: str, _name: str, error_message: str):
+    def __init__(self, _name: str, error_message: str):
         """
         Initializes the DBRequestBuilder with an error message.
 
         :param error_message: str - The error message to be returned in case of an error.
         """
-        self.___app_name = app_name
         self.___query: _DBQuery = _DBQuery()
         self.___name = _name
         self.___error_message = error_message
@@ -353,10 +396,8 @@ class DBRequestBuilder:
         if not args:
             raise _FormatError("Columns to insert cannot be empty or `None`")
 
-        if isinstance(table, DBHybridTable):
-            table.set_app(self.___app_name)
-        else:
-            table = f"{self.___app_name}_{table}"
+        if not isinstance(table, DBHybridTable):
+            table = _meta_model(table)
         self.___query.insert(table, *args)
         return self
 
@@ -380,10 +421,8 @@ class DBRequestBuilder:
         if not table:
             raise _FormatError("Table name cannot be empty or `None`")
 
-        if isinstance(table, DBHybridTable):
-            table.set_app(self.___app_name)
-        else:
-            table = f"{self.___app_name}_{table}"
+        if not isinstance(table, DBHybridTable):
+            table = _meta_model(table)
         self.___query.from_table(table)
         return self
 
@@ -458,6 +497,63 @@ class DBRequestBuilder:
         return self
 
 
+class _DBReference:
+    """
+    This class is used to store the mapping of models.
+
+    The register method is used to register the model in the mapping storage.
+    The find method is used to find the model in the mapping storage.
+
+    The register method is a decorator that takes the database name and the app name as input.
+    """
+    ___databases: dict[str: dict[str: str]] = {}
+
+    @staticmethod
+    def register(database: str, app_name: str):
+        """
+        Registers the model in the mapping storage.
+
+        :param database: str - The name of the database.
+        :param app_name: str - The name of the app.
+        """
+        def wrapper(clazz):
+            class_name = str(clazz.__name__).lower()
+            references = _DBReference.___databases.get(database, dict())
+            if not database in _DBReference.___databases.keys():
+                _DBReference.___databases[database] = references
+            references[class_name] = f"{app_name.lower()}_{class_name}"
+            return clazz
+        return wrapper
+
+    @staticmethod
+    def find(database: str, model_name: str):
+        """
+        Finds the model in the mapping storage.
+
+        :param database: str - The name of the database.
+        :param model_name: str - The name of the model.
+        :return: str - The name of the model in the database.
+        :raises ModelError: If the model is not found.
+        """
+        raise_error = False
+        value = None
+
+        try:
+            value = _DBReference.___databases.get(database, None)
+            value = value.get(model_name, None)
+        except Exception as e:
+            del e
+            raise_error = True
+
+        if raise_error:
+            raise _ModelError("The required table does not exist or is not mapped.")
+
+        return value
+
+
+register = _DBReference.register
+
+
 class _DBServices:
     """
     This class is used to execute a query and establish a connection to the database (SQLite ONLY).
@@ -484,6 +580,4 @@ class _DBServices:
                 value = conn.cursor().execute(query).fetchall()
             except sqlite3.Error as e:
                 raise _DatabaseError(f"An error occurred: {e}")
-        #if not value:
-        #    raise _DatabaseError("No results found.")
         return value

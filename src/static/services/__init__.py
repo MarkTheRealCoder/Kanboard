@@ -1,6 +1,6 @@
 from .requests import RequestHandler
-from .database import DBHybridTable, DBRequestBuilder
+from .database import DBHybridTable, DBRequestBuilder, register, DBHybridField
 
 
-__all__ = ["RequestHandler", "DBHybridTable", "DBRequestBuilder"]
+__all__ = ["RequestHandler", "DBHybridTable", "DBRequestBuilder", "register", "DBHybridField"]
 
