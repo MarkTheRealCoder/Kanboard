@@ -1,10 +1,17 @@
 from django.db import models
 
+from Kanboard.settings import BASE_DIR
 from auth.models import User
+from static.services import register
 
 
 # Create your models here.
 
+database = BASE_DIR / 'db.sqlite3'
+app_name = "core"
+
+
+@register(database, app_name)
 class Board(models.Model):
     id = models.AutoField(primary_key=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -17,6 +24,7 @@ class Board(models.Model):
         return self.name
 
 
+@register(database, app_name)
 class Guests(models.Model):
     user_id = models.ForeignKey(User, on_delete=models.CASCADE, primary_key=True)
     board_id = models.ForeignKey(Board, on_delete=models.CASCADE, primary_key=True)
@@ -25,6 +33,7 @@ class Guests(models.Model):
         return f"{self.user_id} - {self.board_id}"
 
 
+@register(database, app_name)
 class Column(models.Model):
     id = models.AutoField(primary_key=True)
     board_id = models.ForeignKey(Board, on_delete=models.CASCADE, primary_key=True)
@@ -37,6 +46,7 @@ class Column(models.Model):
         return self.title
 
 
+@register(database, app_name)
 class Card(models.Model):
     id = models.AutoField(primary_key=True)
     board_id = models.ForeignKey(Board, on_delete=models.CASCADE, primary_key=True)
