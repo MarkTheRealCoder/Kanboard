@@ -9,30 +9,38 @@ from django.contrib import messages
 HANDLER = RequestHandler(BASE_DIR / 'db.sqlite3')
 
 data = (
-    DBRequestBuilder("user", "You are not logged!")\
-    .select("username", "image")\
-    .from_table("User")\
-    .where(f"PARAM(uuid) = uuid"),
-    DBRequestBuilder("boards_owned", "You do not own any board.")\
-    .select(DHF("board", "id"),DHF("board", "name"),
-        DHF("board", "description"),DHF("board", "image")
-    )\
-    .from_table(
-        DHT("Board", "User",
-            DHF("User", "uuid") == DHF("Board", "owner")
+    DBRequestBuilder("user", "You are not logged!")
+        .select("username", "image")
+        .from_table("User")
+        .where(f"PARAM(uuid) = uuid"),
+        
+    DBRequestBuilder("boards_owned", "You do not own any board.")
+        .select(
+            DHF("board", "id"),
+            DHF("board", "name"),
+            DHF("board", "description"),
+            DHF("board", "image")
         )
-    )\
-    .where(f"PARAM(uuid) = {DHF('Board', 'owner')}"),
-    DBRequestBuilder("boards_guest", "You are not a guest in any board.")\
-    .select(DHF("board", "id"), DHF("board", "name"),
-        DHF("board", "description"), DHF("board", "image")
-    )\
-    .from_table(
-        DHT("Board", "Guests",
-            DHF("Board", "id") == DHF("Guests", "board_id")
+        .from_table(
+            DHT("Board", "User",
+                DHF("User", "uuid") == DHF("Board", "owner")
+            )
         )
-    )\
-    .where(f"PARAM(uuid) = {DHF('Guests', 'user_id')}")
+        .where(f"PARAM(uuid) = {DHF('Board', 'owner')}"),
+        
+    DBRequestBuilder("boards_guest", "You are not a guest in any board.")
+        .select(
+            DHF("board", "id"),
+            DHF("board", "name"),
+            DHF("board", "description"),
+            DHF("board", "image")
+        )
+        .from_table(
+            DHT("Board", "Guests",
+                DHF("Board", "id") == DHF("Guests", "board_id")
+            )
+        )
+        .where(f"PARAM(uuid) = {DHF('Guests', 'user_id')}")
 )
 
 @HANDLER.bind('dashboard', '/dashboard', *data)
@@ -66,6 +74,6 @@ def create_board(request): # Working view
     owner = user
     name = request.POST['name']
     description = request.POST['description']
-    # to be completed
+    # TODO the rest
 
 
