@@ -36,7 +36,7 @@ def user_management(request): # Working view
     return JsonResponses.response(JsonResponses.SUCCESS, 'Your account details has been updated successfully.')
 
 
-@HANDLER.bind('login', '/logout')
+@HANDLER.bind('logout', '/logout')
 def logout(request):
     request.session.flush()
     return redirect('index')
