@@ -567,7 +567,7 @@ class _DBServices:
         """
         self.___db_path: str = db_path
 
-    def execute(self, query: str):
+    def execute(self, query: str) -> list:
         """
         Executes the given query string.
 

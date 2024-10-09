@@ -2,15 +2,14 @@ import re
 
 from django.db.migrations.serializer import UUIDSerializer
 
-from auth.models import User
-
 
 class ModelsAttributeError(Exception):
     pass
 
 
 class UserValidations:
-    def __init__(self, **kwargs):
+    def __init__(self, klass, **kwargs):
+        self.klass = klass
         self.username = kwargs.get('username', None)
         self.email = kwargs.get('email', None)
         self.password = kwargs.get('password', None)
@@ -31,13 +30,13 @@ class UserValidations:
         self.___validate_surname()
 
     def ___validate_username(self):
-        if User.objects.filter(username=self.username).exists():
+        if self.klass.objects.filter(username=self.username).exists():
             raise ModelsAttributeError("Username already exists.")
         if re.match(r'^[a-zA-Z0-9_]+$', self.username) is None:
             raise ModelsAttributeError("Username must contain only letters, numbers and underscores.")
 
     def ___validate_email(self):
-        if User.objects.filter(email=self.email).exists():
+        if self.klass.objects.filter(email=self.email).exists():
             raise ModelsAttributeError("Email already exists.")
         if re.match(r'^[a-zA-Z0-9_]+@[a-zA-Z0-9]+\.[a-zA-Z0-9]+$', self.email) is None:
             raise ModelsAttributeError("Email must be in the format: youremail@example.com")
