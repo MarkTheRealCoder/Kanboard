@@ -3,16 +3,17 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 
 from Kanboard.settings import BASE_DIR
-from static.services import RequestHandler, ModelsAttributeError, UserValidations, JsonResponses
+
+from static.services import RequestHandler, DBRequestBuilder, ModelsAttributeError, UserValidations, JsonResponses  # , JsonResponses
 from .models import User
 import re
 
-
+# Create your views here.
 
 HANDLER = RequestHandler(BASE_DIR / 'db.sqlite3')
 
 
-@HANDLER.bind('user_management', 'account/changes')
+@HANDLER.bind('user_management', 'account/changes/')
 def user_management(request): # Working view
     id = request.session.get('user_id')
     updates = {
@@ -36,12 +37,6 @@ def user_management(request): # Working view
     except ModelsAttributeError as e:
         return JsonResponses.response(JsonResponses.ERROR, f'Something went wrong:\n{str(e)}.')
     return JsonResponses.response(JsonResponses.SUCCESS, 'Your account details has been updated successfully.')
-
-
-@HANDLER.bind('logout', 'logout')
-def logout(request):
-    request.session.flush()
-    return redirect('index')
 
 
 @HANDLER.bind("registration_submission", "register/submit/")
@@ -80,3 +75,29 @@ def login_submission(request): # Working view
         return JsonResponses.response(JsonResponses.ERROR, "Username o password non corretti")
 
     return redirect(reverse('no_auth:index'))
+
+@HANDLER.bind('logout', 'logout/')
+def logout(request):
+    request.session.flush()
+    request.session.set_expiry(0)
+    return redirect('index')
+
+data = (
+    DBRequestBuilder("auth", "user_details", "No user found with this ID!")
+    .select("username", "email", "image", "name", "surname", "date_joined")
+    .from_table("user")
+    .where("uuid = PARAM(uuid)"),
+)
+
+
+@HANDLER.bind("user_details", "account/", *data)
+def user_details_view(request, user_details):
+    """
+    Executes the query to retrieve user details after login.
+    :param request: HttpRequest - The HTTP request object.
+    :param user_details: str - The result of the user details query.
+    :return: HttpResponse - The rendered HTML page with user details.
+    """
+    return render(request, "user_details.html", {
+        "user": user_details
+    })
