@@ -43,7 +43,7 @@ data = (
         .where(f"PARAM(uuid) = {DHF('Guests', 'user_id')}")
 )
 
-@HANDLER.bind('dashboard', 'dashboard', *data)
+@HANDLER.bind('dashboard', 'dashboard/', *data)
 def dashboard(request, user, boards_owned, boards_guested): # Display view
     user = request.session.get('uuid', None)
     if user is None:
@@ -66,7 +66,7 @@ def dashboard(request, user, boards_owned, boards_guested): # Display view
     })
 
 
-@HANDLER.bind('create_board', 'create_board')
+@HANDLER.bind('create_board', 'create_board/')
 def create_board(request): # Working view
     user = request.session.get('uuid', None)
     if user is None:
