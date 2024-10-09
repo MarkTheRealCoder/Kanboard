@@ -6,14 +6,14 @@ from static.services import RequestHandler
 # Create your views here.
 HANDLER = RequestHandler(BASE_DIR / 'db.sqlite3')
 
-@HANDLER.bind('index', '/')
+@HANDLER.bind('index', "")
 def index(request): # Display view
     return render(request, 'index.html')
 
-@HANDLER.bind('login', '/login')
+@HANDLER.bind('login', 'login')
 def login(request): # Display view
     return render(request, 'login.html')
 
-@HANDLER.bind('register', '/register')
+@HANDLER.bind('register', 'register')
 def register(request): # Display view
     return render(request, 'register.html')

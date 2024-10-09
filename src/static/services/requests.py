@@ -3,7 +3,7 @@ from typing import Callable
 from django.http import HttpResponse, HttpRequest, JsonResponse
 from django.urls import path, resolve
 
-from static.services.database import DBRequestBuilder, _DBServices, _DatabaseError
+from .database import DBRequestBuilder, _DBServices, _DatabaseError
 
 
 class RequestHandler:
