@@ -5,7 +5,7 @@ from static.services import register
 
 # Create your models here.
 database = BASE_DIR / 'db.sqlite3'
-app_name = "auth"
+app_name = "authentication"
 
 
 @register(database, app_name)
