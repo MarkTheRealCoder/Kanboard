@@ -1,12 +1,12 @@
-from typing import re
-
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse
 
 from Kanboard.settings import BASE_DIR
+
 from static.services import RequestHandler, DBRequestBuilder, ModelsAttributeError, UserValidations, JsonResponses  # , JsonResponses
 from .models import User
+import re
 
 # Create your views here.
 
@@ -39,6 +39,43 @@ def user_management(request): # Working view
     return JsonResponses.response(JsonResponses.SUCCESS, 'Your account details has been updated successfully.')
 
 
+@HANDLER.bind("registration_submission", "register/submit/")
+def registration_submission(request): # Working view
+    if request.method == 'POST':
+        username = request.POST['username']
+        email = request.POST['email']
+        password = request.POST['password']
+
+        # Verifica se l'utente esiste già
+        if User.objects.filter(username=username).exists():
+            return JsonResponses.response(JsonResponses.ERROR, "Username Already Used")
+
+        if User.objects.filter(email=email).exists():
+            return JsonResponses.response(JsonResponses.ERROR, "Email Already Used")
+
+        # Crea il nuovo utente
+        user = User.objects.create_user(username=username, email=email, password=password)
+
+        return redirect('login')  # Reindirizza alla pagina di login
+
+    return render(request, 'registration.html')
+
+@HANDLER.bind("login_submission", "login/submit/")
+def login_submission(request): # Working view
+    key = request.POST['key']
+    password = request.POST['password']
+    # Controlla se la key è un'email usando una regex
+    email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+
+    field = "email" if re.match(email_regex, key) else "username"
+    request = {field: key, "password":password}
+    user = User.objects.filter(**request).exists()  # Usa .filter() e ottieni il primo risultato
+
+    if not user:
+        return JsonResponses.response(JsonResponses.ERROR, "Username o password non corretti")
+
+    return redirect(reverse('no_auth:index'))
+
 @HANDLER.bind('logout', 'logout/')
 def logout(request):
     request.session.flush()
@@ -53,7 +90,7 @@ data = (
 )
 
 
-@HANDLER.bind("user_details", "/account", *data)
+@HANDLER.bind("user_details", "account/", *data)
 def user_details_view(request, user_details):
     """
     Executes the query to retrieve user details after login.
