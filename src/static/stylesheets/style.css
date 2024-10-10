@@ -1,0 +1,271 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+}
+
+body {
+    font-family: Inter, sans-serif;
+    color: var(--white);
+    background-color: var(--dark-gray);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}
+
+.form-box {
+    background-color: var(--dark-gray);
+    padding: 40px;
+    width: 500px;
+    text-align: center;
+    z-index: 1;
+    position: relative;
+    animation: zoomIn 0.3s ease-out;
+}
+
+.form {
+    text-align: left;
+    display: block;
+    margin-top: 2em;
+    margin-bottom: 2em;
+}
+
+.form-title {
+    font-size: 50px;
+    margin-bottom: 1.2em;
+}
+
+.form-box div {
+    display: flex;
+    justify-content: space-between;
+}
+
+.form-box div label {
+    flex: 1;
+    margin-right: 10px;
+}
+
+.form-box div label:last-child {
+    margin-right: 0;
+}
+
+.form-footer {
+    margin-top: 2em;
+}
+
+.form-footer a {
+    color: #5ed399;
+}
+
+.form-footer a:hover {
+    color: #1ab565;
+}
+
+h1.app-title {
+    font-family: 'Bigshot One', cursive;
+    color: #ff6f61;
+}
+
+.input-container {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.input-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    filter: invert(56%) sepia(0%) saturate(1175%) hue-rotate(136deg) brightness(89%) contrast(96%);
+}
+
+.form-box .name-surname-row .input-field#name {
+    margin-right: 5px;
+}
+
+.form-box .name-surname-row .input-field#surname {
+    margin-left: 5px;
+}
+
+.input-field {
+    width: 100%;
+    padding: 10px 10px 10px 45px;
+    border: 1px solid #666;
+    background-color: #333;
+    color: var(--white);
+    border-radius: 5px;
+    font-size: 18px;
+}
+
+.submit-button {
+    width: 100%;
+    margin-top: 2em;
+    padding: 15px;
+    background-color: #388f64;
+    color: var(--white);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 18px;
+}
+
+.submit-button:hover {
+    background-color: #167e50;
+}
+
+.context {
+    width: 100%;
+    position: absolute;
+    top: 50vh;
+}
+
+.context h1 {
+    text-align: center;
+    color: #fff;
+    font-size: 50px;
+}
+
+.filter-white {
+    filter: invert(100%) sepia(100%) saturate(0%) hue-rotate(333deg) brightness(106%) contrast(101%);
+}
+
+body#index {
+    display: block;
+    height: 100vh;
+    width: 100%;
+}
+
+header > .title {
+    display: flex;
+    justify-content: center;
+    margin: 2em 0 8.8em;
+}
+
+header > .title > .logo {
+    font-family: 'Bigshot One', cursive;
+    font-style: italic;
+    font-size: 100px;
+}
+
+header > .title > img {
+    width: 75%;
+}
+
+.index {
+    display: block;
+    height: 100vh;
+    width: 100%;
+}
+
+.index > section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.index .first-section :first-child {
+    margin-right: 2em;
+}
+
+.index .second-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 8em;
+}
+
+.index .second-section :first-child {
+    margin-top: 0;
+}
+
+.index .mega-section {
+    display: grid;
+    justify-content: center;
+    align-items: center;
+    margin-top: 10em;
+    padding: 5em 0;
+}
+
+.index .description-box {
+    display: grid;
+    border-radius: 1em;
+    padding: 5em;
+    margin: 3em;
+    min-width: 50%;
+}
+
+.index .mega-section .description-box:nth-child(1) {
+    text-align: right;
+}
+
+.index .description-box li {
+    margin-bottom: 1em;
+}
+
+.index .description-box li:last-child {
+    margin-bottom: 0;
+}
+
+.index .description-box ul {
+    padding-left: 1em;
+}
+
+.index .color-dark-grey {
+    background-color: rgba(26, 26, 26, 0.5);
+}
+
+.index .description-box .title,
+.index .mega-section h1 {
+    font-size: 40px;
+    margin-bottom: 1em;
+}
+
+.index .mega-section h1 {
+    text-align: center;
+}
+
+.index .mega-section p {
+    font-size: 25px;
+}
+
+.index .description-box .button {
+    margin-top: 2em;
+    color: #fff;
+    border: 1px solid #fff;
+    padding: 1em 2em;
+    border-radius: 2em;
+    cursor: pointer;
+    font-size: 18px;
+    width: fit-content;
+    background-position: right center;
+    background-image: linear-gradient(to right, #23a56f 0%, #0f3443 51%, #23a56f 100%);
+    background-size: 200% auto;
+    transition: 0.5s;
+}
+
+.index .description-box .button:hover {
+    background-position: left center;
+}
+
+.violet-background {
+    background: #0f0f18;
+    background: -webkit-linear-gradient(to left, #191925, #0f0f18);
+}
+
+#surname-icon {
+    left: 15px
+}
+
+.index .mega-section .description-box:nth-child(1) {
+}
