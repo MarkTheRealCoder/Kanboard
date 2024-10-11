@@ -83,7 +83,7 @@ def logout(request):
     return redirect('index')
 
 data = (
-    DBRequestBuilder("auth", "user_details", "No user found with this ID!")
+    DBRequestBuilder( "user_details", "No user found with this ID!")
     .select("username", "email", "image", "name", "surname", "date_joined")
     .from_table("user")
     .where("uuid = PARAM(uuid)"),
