@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanboard - Log In</title>
+    <link rel="stylesheet" href="../../static/stylesheets/main.css">
+    <link rel="stylesheet" href="../../static/stylesheets/style.css">
+    <link rel="stylesheet" href="../../static/stylesheets/animations.css">
+</head>
+<body>
+    <div class="container area">
+        <ul class="circles">
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+        </ul>
+        <div class="form-box">
+            <h1 class="form-title">Log In</h1>
+            <form action="login/submit" method="post">
+                <div class="input-container">
+                    <img src="../../static/assets/icons/tag.svg" alt="Email Icon" class="input-icon">
+                    <input type="email" id="email" name="email" class="input-field" placeholder="Email or Username" required>
+                </div>
+                <div class="input-container">
+                    <img src="../../static/assets/icons/key.svg" alt="Password Icon" class="input-icon">
+                    <input type="password" id="password" name="password" class="input-field" placeholder="Password" required>
+                </div>
+                <button type="submit" class="submit-button">Log In</button>
+            </form>
+            <div class="form-footer">
+                <a href="register.html" class="form-text">Need an account? Create one!</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

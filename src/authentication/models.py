@@ -5,19 +5,19 @@ from static.services import register
 
 # Create your models here.
 database = BASE_DIR / 'db.sqlite3'
-app_name = "auth"
+app_name = "authentication"
 
 
 @register(database, app_name)
 class User(models.Model):
     uuid = models.UUIDField(primary_key=True)
-    username = models.CharField(max_length=100)
-    email = models.EmailField()
-    password = models.CharField(max_length=100)
-    image = models.ImageField(width_field=100, height_field=100)
+    username = models.CharField(max_length=16, unique=True)
+    email = models.EmailField(unique=True)
+    password = models.CharField(max_length=32)
+    image = models.ImageField()
+    name = models.CharField(max_length=32)
+    surname = models.CharField(max_length=32)
 
-    name = models.CharField(max_length=100)
-    surname = models.CharField(max_length=100)
     last_login = models.DateTimeField()
     date_joined = models.DateTimeField()
 

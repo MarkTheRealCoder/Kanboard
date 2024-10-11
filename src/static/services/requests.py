@@ -1,9 +1,9 @@
 from typing import Callable
 
-from django.http import HttpResponse, HttpRequest
+from django.http import HttpResponse, HttpRequest, JsonResponse
 from django.urls import path, resolve
 
-from static.services.database import DBRequestBuilder, _DBServices, _DatabaseError
+from .database import DBRequestBuilder, _DBServices, _DatabaseError
 
 
 class RequestHandler:
@@ -81,12 +81,15 @@ class RequestHandler:
         except Exception as e:
             return HttpResponse("404 Not Found")
         arguments = kwargs
+        arguments['uuid'] = request.session.get('user_id', None)
 
         for dbreq in dbrequests:
             try:
                 arguments[dbreq.name()] = self.___get_from_db(dbreq.query(**kwargs))
             except _DatabaseError as e:
                 return HttpResponse(dbreq.message())
+
+        arguments.pop('uuid')
 
         return view(request, **arguments)
 
@@ -105,4 +108,30 @@ class RequestHandler:
 
     def urls(self):
         return self.___urls
+
+
+
+class JsonResponses:
+    """
+    JsonResponses class
+    This class is a utility class that contains static methods for generating JSON responses.
+
+    Methods:
+        response: Generates a Status JSON response.
+    """
+
+    WARNING = 100
+    SUCCESS = 200
+    ERROR = 500
+
+    @staticmethod
+    def response(status: int, message: str):
+        """
+        Generates a JSON response.
+
+        :param status: int - The status code of the response.
+        :param message: str - The message to include in the response.
+        :return: JsonResponse - The JSON response.
+        """
+        return JsonResponse({'status': status, 'message': message})
 

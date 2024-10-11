@@ -1,0 +1,25 @@
+html {
+    --white: #fff;
+    --black: #000;
+    --gray: #666;
+    --dark-gray: #1a1a1a;
+
+    --square-red: rgba(218, 52, 52, 0.2);
+    --square-pink: rgba(209, 61, 126, 0.2);;
+    --square-orange: rgba(202, 123, 80, 0.2);
+    --square-green: rgba(169, 250, 146, 0.2);
+    --square-cyan: rgba(96, 234, 218, 0.2);
+
+    --button-green: #266a47;
+    --button-green-hover: #12492d;
+}
+
+@font-face {
+    font-family: 'Bigshot One';
+    src: url('../assets/fonts/BigshotOne-Regular.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Inter';
+    src: url('../assets/fonts/Inter.ttf') format('truetype');
+}
