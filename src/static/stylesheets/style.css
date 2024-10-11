@@ -13,6 +13,7 @@ body {
     justify-content: center;
     align-items: center;
     height: 100vh;
+    width: 100%;
 }
 
 .container {
@@ -185,10 +186,6 @@ header > .title > img {
     margin-top: 8em;
 }
 
-.index .second-section :first-child {
-    margin-top: 0;
-}
-
 .index .mega-section {
     display: grid;
     justify-content: center;
@@ -269,3 +266,24 @@ header > .title > img {
 
 .index .mega-section .description-box:nth-child(1) {
 }
+
+#service-message {
+    width: calc(100% / 3);
+    height: fit-content;
+    position: absolute;
+    z-index: 100;
+    top: 10px;
+    left: calc(50% - (100% / 3) / 2);
+    padding: 1em;
+    border: 1px solid;
+    border-radius: 5px;
+    color: whitesmoke;
+    visibility: hidden;
+    text-align: center;
+}
+
+a.no-style-text {
+    text-decoration: none;
+    color: inherit;
+}
+
