@@ -3,6 +3,7 @@ html {
     --black: #000;
     --gray: #666;
     --dark-gray: #1a1a1a;
+    --darker-gray: #121212;
 
     --square-red: rgba(218, 52, 52, 0.2);
     --square-pink: rgba(209, 61, 126, 0.2);;

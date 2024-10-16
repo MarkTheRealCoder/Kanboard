@@ -30,7 +30,7 @@
         </ul>
         <div class="form-box">
             <h1 class="form-title">Register</h1>
-            <form action="register/submit" method="post">
+            <form action="submit/" method="post">
                 <div class="name-surname-row">
                     <div class="input-container">
                         <img src="../../static/assets/icons/user.svg" alt="Name Icon" class="input-icon">
@@ -57,7 +57,7 @@
                     <img src="../../static/assets/icons/key.svg" alt="Repeat Password Icon" class="input-icon">
                     <input type="password" id="repeat-password" name="repeat-password" class="input-field" placeholder="Repeat Password" required>
                 </div>
-                <button type="submit" class="submit-button" onclick="event.preventDefault(); sendRequest('test/', ['email', 'password', 'name', 'surname', 'username'], displayMessage, displayMessage);">Register</button>
+                <button type="submit" class="submit-button" onclick="event.preventDefault(); sendRequest('submit/', ['email', 'password', 'name', 'surname', 'username'], displayMessage, displayMessage);">Register</button>
             </form>
             <div class="form-footer">
                 <a href="{% url 'no_auth:login' %}" class="form-text">Already have an account? Log In</a>
