@@ -1,6 +1,6 @@
 from django.urls import path
 
-from authentication import views
+from . import views
 
 app_name = 'core'
 
