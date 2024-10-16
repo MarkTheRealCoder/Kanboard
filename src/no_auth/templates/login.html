@@ -34,13 +34,13 @@
                 {% csrf_token %}
                 <div class="input-container">
                     <img src="../../static/assets/icons/tag.svg" alt="Email Icon" class="input-icon">
-                    <input type="email" id="email" name="email" class="input-field" placeholder="Email or Username" required>
+                    <input type="text" id="email" name="key" class="input-field" placeholder="Email or Username" required>
                 </div>
                 <div class="input-container">
                     <img src="../../static/assets/icons/key.svg" alt="Password Icon" class="input-icon">
                     <input type="password" id="password" name="password" class="input-field" placeholder="Password" required>
                 </div>
-                <button type="submit" class="submit-button" onclick="event.preventDefault(); sendRequest('test/', ['email', 'password'], displayMessage, displayMessage);">Log In</button>
+                <button type="submit" class="submit-button" onclick="event.preventDefault(); sendRequest('submit/', ['key', 'password'], displayMessage, displayMessage);">Log In</button>
             </form>
             <div class="form-footer">
                 <a href="{% url 'no_auth:register' %}" class="form-text">Need an account? Create one!</a>

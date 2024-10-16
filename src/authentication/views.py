@@ -4,7 +4,7 @@ from django.urls import reverse
 
 from Kanboard.settings import BASE_DIR
 
-from static.services import RequestHandler, DBRequestBuilder, ModelsAttributeError, UserValidations, JsonResponses  # , JsonResponses
+from static.services import RequestHandler, DBRequestBuilder, ModelsAttributeError, UserValidations, JsonResponses
 from .models import User
 import re
 
@@ -41,54 +41,66 @@ def user_management(request): # Working view
 
 @HANDLER.bind("registration_submission", "register/submit/")
 def registration_submission(request): # Working view
-    if request.method == 'POST':
-        username = request.POST['username']
-        email = request.POST['email']
-        password = request.POST['password']
+    if request.method != 'POST':
+        return JsonResponses.response(JsonResponses.ERROR, "Invalid request")
 
-        # Verifica se l'utente esiste già
-        if User.objects.filter(username=username).exists():
-            return JsonResponses.response(JsonResponses.ERROR, "Username Already Used")
+    required_fields = {
+        'username': request.POST.get('username', None),
+        'email': request.POST.get('email', None),
+        'password': request.POST.get('password', None),
+        'name': request.POST.get('name', None),
+        'surname': request.POST.get('surname', None)
+    }
 
-        if User.objects.filter(email=email).exists():
-            return JsonResponses.response(JsonResponses.ERROR, "Email Already Used")
+    uuid = ""
+    try:
+        uuid = UserValidations(User, **required_fields).result().generate_uuid()
+    except ModelsAttributeError as e:
+        return JsonResponses.response(JsonResponses.ERROR, f'Something went wrong:\n{str(e)}.')
 
-        # Crea il nuovo utente
-        user = User.objects.create_user(username=username, email=email, password=password)
+    # user = User.objects.create_user(uuid=uuid, **required_fields)
 
-        return redirect('login')  # Reindirizza alla pagina di login
+    request.session['uuid'] = uuid
+    request.session.set_expiry(0)
+    return redirect(reverse('core:dashboard'))
 
-    return render(request, 'registration.html')
 
 @HANDLER.bind("login_submission", "login/submit/")
 def login_submission(request): # Working view
-    key = request.POST['key']
-    password = request.POST['password']
-    # Controlla se la key è un'email usando una regex
-    email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+    print(request.POST)
+    key = request.POST.get('key', None)
+    password = request.POST.get('password', None)
+    field = 'email'
 
-    field = "email" if re.match(email_regex, key) else "username"
+    try:
+        UserValidations(User, **{field: key}).result()
+    except ModelsAttributeError as e:
+        if not e.is_existence():
+            field = 'username'
+
     request = {field: key, "password":password}
-    user = User.objects.filter(**request).exists()  # Usa .filter() e ottieni il primo risultato
+    user = User.objects.filter(**request).first()
 
     if not user:
         return JsonResponses.response(JsonResponses.ERROR, "Username o password non corretti")
 
-    return redirect(reverse('no_auth:index'))
+    request.session['uuid'] = user.uuid
+    request.session.set_expiry(0)
+    return redirect(reverse('core:dashboard'))
+
 
 @HANDLER.bind('logout', 'logout/')
-def logout(request):
+def logout(request): # Working view
     request.session.flush()
-    request.session.set_expiry(0)
-    return redirect('index')
+    return redirect(reverse('no_auth:index'))
+
 
 data = (
-    DBRequestBuilder( "user_details", "No user found with this ID!")
+    DBRequestBuilder("user_details", "No user found with this ID!")
     .select("username", "email", "image", "name", "surname", "date_joined")
     .from_table("user")
     .where("uuid = PARAM(uuid)"),
 )
-
 
 @HANDLER.bind("user_details", "account/", *data)
 def user_details_view(request, user_details):

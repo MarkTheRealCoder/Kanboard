@@ -64,6 +64,7 @@ class Card(models.Model):
     color = models.CharField(max_length=7)
     creation_date = models.DateTimeField()
     expiration_date = models.DateTimeField()
+    completion_date = models.DateTimeField()
     story_points = models.IntegerField()
     index = models.IntegerField()
 

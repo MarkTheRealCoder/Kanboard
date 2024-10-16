@@ -1,9 +1,13 @@
+let TIMER = null;
+
+
 window.onload = function() {
     const msgBox = $('#service-message');
     msgBox.css('visibility', 'hidden');
     msgBox.on( "click", function() {
-        $( this ).fadeOut(2000);
+        $( this ).fadeOut(2000, () => {clearTimeout(TIMER)});
     });
+
 }
 
 function displayMessage(data) {
@@ -23,16 +27,21 @@ function displayMessage(data) {
         default:
             break;
     }
+
     const msgBox = $('#service-message')
     let closed = false;
 
+    if (TIMER) {
+        clearTimeout(TIMER);
+        msgBox.fadeOut(0);
+    }
     msgBox.text(message)
         .css('background-color', bg_col)
         .css('border-color', border_col)
         .css('visibility', 'visible')
         .fadeIn(500);
 
-    setTimeout(() => {
+    TIMER = setTimeout(() => {
         msgBox.fadeOut(2000);
     }, 5000)
 }
