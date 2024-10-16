@@ -1,14 +1,20 @@
 <!DOCTYPE html>
+{% load static %}
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <title>Kanboard - Register</title>
-    <link rel="stylesheet" href="../../static/stylesheets/main.css">
-    <link rel="stylesheet" href="../../static/stylesheets/style.css">
-    <link rel="stylesheet" href="../../static/stylesheets/animations.css">
+    <link rel="stylesheet" href="{% static 'stylesheets/main.css' %}">
+    <link rel="stylesheet" href="{% static 'stylesheets/style.css' %}">
+    <link rel="stylesheet" href="{% static 'stylesheets/animations.css' %}">
+    <script type="application/javascript" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script type="application/javascript" src="{% static 'scripts/micro.js' %}"></script>
+    <script type="application/javascript" src="{% static 'scripts/messages.js' %}"></script>
 </head>
 <body>
+    <p id="service-message"></p>
     <div class="container area">
         <ul class="circles">
             <li></li>
@@ -24,7 +30,7 @@
         </ul>
         <div class="form-box">
             <h1 class="form-title">Register</h1>
-            <form action="register/submit" method="post">
+            <form action="submit/" method="post">
                 <div class="name-surname-row">
                     <div class="input-container">
                         <img src="../../static/assets/icons/user.svg" alt="Name Icon" class="input-icon">
@@ -51,10 +57,10 @@
                     <img src="../../static/assets/icons/key.svg" alt="Repeat Password Icon" class="input-icon">
                     <input type="password" id="repeat-password" name="repeat-password" class="input-field" placeholder="Repeat Password" required>
                 </div>
-                <button type="submit" class="submit-button">Register</button>
+                <button type="submit" class="submit-button" onclick="event.preventDefault(); sendRequest('submit/', ['email', 'password', 'name', 'surname', 'username'], displayMessage, displayMessage);">Register</button>
             </form>
             <div class="form-footer">
-                <a href="login.html" class="form-text">Already have an account? Log In</a>
+                <a href="{% url 'no_auth:login' %}" class="form-text">Already have an account? Log In</a>
             </div>
         </div>
     </div>
