@@ -12,6 +12,8 @@ html {
 
     --button-green: #266a47;
     --button-green-hover: #12492d;
+
+    --deep-blue: #0f0f18;
 }
 
 @font-face {
@@ -22,4 +24,32 @@ html {
 @font-face {
     font-family: 'Inter';
     src: url('../assets/fonts/Inter.ttf') format('truetype');
+}
+
+.filter-white {
+    filter: invert(100%) sepia(100%) saturate(0%) hue-rotate(333deg) brightness(106%) contrast(101%);
+}
+
+.filter-red {
+    filter: invert(61%) sepia(77%) saturate(6129%) hue-rotate(334deg) brightness(124%) contrast(112%);
+}
+
+/* Scrollbar chromium */
+
+::-webkit-scrollbar {
+    width: 5px;
+}
+
+::-webkit-scrollbar-track {
+    background-color: rgba(0, 0, 0, .95);
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: var(--dark-gray);
+}
+
+/* Scrollbar firefox */
+* {
+    scrollbar-width: thin; /* This makes the scrollbar thinner */
+    scrollbar-color: #7e7e7e rgba(0, 0, 0, .4); /* thumb color | track color */
 }
