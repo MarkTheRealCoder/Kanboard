@@ -531,17 +531,15 @@ def create_board_view(request):
 
     name = request.POST.get("name")
     description = request.POST.get("description")
-    image = request.FILES.get("image", None)
 
-    if not name or not description or not image:
-        return JsonResponses.response(JsonResponses.ERROR, "Name, description, and image are required.")
+    if not name or not description:
+        return JsonResponses.response(JsonResponses.ERROR, "Name and description are required.")
 
     try:
         new_board = Board.objects.create(
             owner_id=user,
             name=name,
             description=description,
-            image=image
         )
         new_board.save()
 

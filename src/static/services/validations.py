@@ -94,4 +94,123 @@ class UserValidations:
         if re.match(r'^[a-zA-Z]+$', self.surname) is None:
             raise ModelsAttributeError("Surname must contain only letters")
 
+class BoardValidations:
+    def __init__(self, **kwargs):
+        self.title = kwargs.get('title', None)
+        self.description = kwargs.get('description', None)
+        self.image = kwargs.get('image', None)
+
+    def result(self):
+        self.___validate_title()
+        self.___validate_description()
+        self.___validate_image()
+
+    def ___validate_title(self):
+        if self.title is None:
+            return
+        if not re.match(r'^[a-zA-Z0-9 ]{1,16}$', self.title):
+            raise ModelsAttributeError(
+                "Title must be 16 characters or less and must contain only letters, numbers, and the special character: '_'.")
+
+    def ___validate_description(self):
+        if self.description is None:
+            return
+        if re.match(r'^[a-zA-Z0-9 .,;:!?-_()\n]{1,256}$', self.description) is None:
+            raise ModelsAttributeError(
+                "Description contains invalid characters or exceeds 256 characters. Accepted characters are "
+                "letters, numbers, spaces, newlines, and the following special characters: '.', ',', ';', ':', '!', '?', '-', '', '(', ')'.")
+
+    def ___validate_image(self):
+        if self.image is None:
+            return
+        if self.image.size > 3 * 1024 * 1024:
+            raise ModelsAttributeError("Image size must be less than 3MB.")
+        if not re.match(r'^image/(jpeg|png|jpg)$', self.image.content_type):
+            raise ModelsAttributeError("Image must be in the format: jpeg, png or jpg.")
+
+
+class ColumnValidations:
+    def __init__(self, **kwargs):
+        self.title = kwargs.get('title', None)
+        self.description = kwargs.get('description', None)
+        self.color = kwargs.get('color', None)
+        self.image = kwargs.get('image', None)
+
+    def result(self):
+        self.___validate_title()
+        self.___validate_description()
+        self.___validate_color()
+        self.___validate_image()
+
+    def ___validate_title(self):
+        if self.title is None:
+            return
+        if not re.match(r'^[a-zA-Z0-9 ]{1,20}$', self.title):
+            raise ModelsAttributeError(
+                "Title must be 20 characters or less and must contain only letters, numbers, and the special character: ''.")
+
+    def ___validate_description(self):
+        if self.description is None:
+            return
+        if re.match(r'^[a-zA-Z0-9 .,;:!?-_()\n]{1,256}$', self.description) is None:
+            raise ModelsAttributeError(
+                "Description contains invalid characters or exceeds 256 characters. Accepted characters are "
+                "letters, numbers, spaces, newlines, and the following special characters: '.', ',', ';', ':', '!', '?', '-', '', '(', ')'.")
+
+    def ___validate_color(self):
+        if self.color is None:
+            return
+        if not re.match(r'^#[0-9A-Fa-f]{6}$', self.color):
+            raise ModelsAttributeError("Color must be in the format #RRGGBB (hexadecimal).")
+
+    def ___validate_image(self):
+        if self.image is None:
+            return
+        if self.image.size > 3 * 1024 * 1024:
+            raise ModelsAttributeError("Image size must be less than 3MB.")
+        if not re.match(r'^image/(jpeg|png|jpg)$', self.image.content_type):
+            raise ModelsAttributeError("Image must be in the format: jpeg, png or jpg.")
+
+
+class CardValidations:
+    def __init__(self, **kwargs):
+        self.title = kwargs.get('title', None)
+        self.description = kwargs.get('description', None)
+        self.color = kwargs.get('color', None)
+        self.image = kwargs.get('image', None)
+
+    def result(self):
+        self.___validate_title()
+        self.___validate_description()
+        self.___validate_color()
+        self.___validate_image()
+
+    def ___validate_title(self):
+        if self.title is None:
+            return
+        if not re.match(r'^[a-zA-Z0-9 ]{1,20}$', self.title):
+            raise ModelsAttributeError(
+                "Title must be 20 characters or less and must contain only letters, numbers, and the special character: ''.")
+
+    def ___validate_description(self):
+        if self.description is None:
+            return
+        if re.match(r'^[a-zA-Z0-9 .,;:!?-_()\n]{1,256}$', self.description) is None:
+            raise ModelsAttributeError(
+                "Description contains invalid characters or exceeds 256 characters. Accepted characters are "
+                "letters, numbers, spaces, newlines, and the following special characters: '.', ',', ';', ':', '!', '?', '-', '', '(', ')'.")
+
+    def ___validate_color(self):
+        if self.color is None:
+            return
+        if not re.match(r'^#[0-9A-Fa-f]{6}$', self.color):
+            raise ModelsAttributeError("Color must be in the format #RRGGBB (hexadecimal).")
+
+    def ___validate_image(self):
+        if self.image is None:
+            return
+        if self.image.size > 3 * 1024 * 1024:
+            raise ModelsAttributeError("Image size must be less than 3MB.")
+        if not re.match(r'^image/(jpeg|png|jpg)$', self.image.content_type):
+            raise ModelsAttributeError("Image must be in the format: jpeg, png or jpg.")
 
