@@ -3,7 +3,7 @@ from typing import Callable
 from django.http import HttpResponse, HttpRequest, JsonResponse
 from django.urls import path, resolve
 
-from .database import DBRequestBuilder, _DBServices, _DatabaseError
+from .database import _DBServices, _DatabaseError, DBQuery
 
 
 class RequestHandler:
@@ -36,7 +36,7 @@ class RequestHandler:
         """
         Initializes the RequestHandler instance.
         """
-        self.___views: dict[str: tuple[Callable, tuple[DBRequestBuilder]]] = {}
+        self.___views: dict[str: tuple[Callable, tuple[DBQuery], dict]] = {}
         self.___dbservice: _DBServices = _DBServices(db_name)
         self.___urls = []
 
@@ -49,7 +49,7 @@ class RequestHandler:
         """
         return self.___dbservice.execute(query)
 
-    def bind(self, _name: str, _path: str, *data: tuple[DBRequestBuilder]):
+    def bind(self, _name: str, _path: str, *data: tuple[DBQuery], session: bool = False, request: str = None):
         """
         Binds a view to a specific path.
 
@@ -59,7 +59,7 @@ class RequestHandler:
         :return: Callable - The decorator function.
         """
         def decorator(view: Callable):
-            self.___views[_path] = (view, data)
+            self.___views[_path] = (view, data, {"session": session, "request": request})
             self.___urls.append(path(_path, self.forward, name=f"{_name}"))
             def wrapper(*args, **kwargs):
                 return view(*args, **kwargs)
@@ -75,13 +75,19 @@ class RequestHandler:
         :return: HttpResponse - The response from the view or an error message.
         """
 
-        view, dbrequests = None, None
+        view, dbrequests, options = None, None, None
         try:
-            view, dbrequests = self.___match_path(request.path)
+            view, dbrequests, options = self.___match_path(request.path)
         except Exception as e:
             return HttpResponse("404 Not Found")
+
         arguments = kwargs
-        arguments['uuid'] = request.session.get('user_id', None)
+        arguments['uuid'] = request.session.get('uuid', None)
+
+        if options['session'] and arguments['uuid'] is None:
+            return HttpResponse("401 Unauthorized")
+        if options['request'] is not None and request.method != options['request']:
+            return HttpResponse("405 Method Not Allowed")
 
         for dbreq in dbrequests:
             try:
@@ -93,7 +99,7 @@ class RequestHandler:
 
         return view(request, **arguments)
 
-    def ___match_path(self, path: str) -> tuple[Callable, tuple[DBRequestBuilder]]:
+    def ___match_path(self, path: str) -> tuple[Callable, tuple[DBQuery], dict]:
         """
         Matches the path specified in the bind decorator with the current path provided by the request object.
         Matching is more complicated than just checking if the path is in the dictionary, because the path can contain
@@ -134,4 +140,3 @@ class JsonResponses:
         :return: JsonResponse - The JSON response.
         """
         return JsonResponse({'status': status, 'message': message})
-

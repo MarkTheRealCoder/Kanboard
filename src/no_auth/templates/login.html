@@ -12,6 +12,7 @@
     <script type="application/javascript" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script type="application/javascript" src="{% static 'scripts/micro.js' %}"></script>
     <script type="application/javascript" src="{% static 'scripts/messages.js' %}"></script>
+    <script type="application/javascript" src="{% static 'scripts/validators.js' %}"></script>
 </head>
 <body>
     <p id="service-message"></p>
@@ -40,7 +41,7 @@
                     <img src="../../static/assets/icons/key.svg" alt="Password Icon" class="input-icon">
                     <input type="password" id="password" name="password" class="input-field" placeholder="Password" required>
                 </div>
-                <button type="submit" class="submit-button" onclick="event.preventDefault(); sendRequest('submit/', ['key', 'password'], displayMessage, displayMessage);">Log In</button>
+                <button type="submit" class="submit-button" onclick="triggerMicro('submit/', ['key', 'password'], displayMessage, displayMessage);">Log In</button>
             </form>
             <div class="form-footer">
                 <a href="{% url 'no_auth:register' %}" class="form-text">Need an account? Create one!</a>

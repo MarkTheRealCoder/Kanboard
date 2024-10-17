@@ -1,17 +1,14 @@
 from .requests import RequestHandler, JsonResponses
-from .database import DBHybridTable, DBRequestBuilder, register, DBHybridField
+from .database import DBTable, register, DBQuery
 from .validations import ModelsAttributeError, UserValidations
 
 
 __all__ = [
     "RequestHandler",
-    "DBHybridTable",
-    "DBRequestBuilder",
+    "DBQuery",
     "register",
-    "DBHybridField",
+    "DBTable",
     "ModelsAttributeError",
     "UserValidations",
     "JsonResponses"
 ]
-
-

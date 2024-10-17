@@ -8,6 +8,7 @@
     <link rel="stylesheet" type="text/css" href="{% static 'stylesheets/main.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'stylesheets/style.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'stylesheets/animations.css' %}">
+    <script type="application/javascript" src="{% static 'scripts/validators.js' %}"></script>
 </head>
 <body id="index" class="violet-background">
     <header>
@@ -24,7 +25,6 @@
                 <p>From scratch to finish, manage your projects with ease. </p>
 
                 <a class="button no-style-text" href="{% url 'no_auth:register' %}">Get Started</a>
-                <a class="button no-style-text" href="{% url 'no_auth:test' %}">Get Tested</a>
             </div>
             <img src="https://placehold.co/600x400/EEE/31343C" alt="placeholder">
         </section>

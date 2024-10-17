@@ -17,16 +17,15 @@ class Board(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
     description = models.TextField()
-    image = models.ImageField(width_field=100, height_field=100)
+    image = models.ImageField(blank=True, null=True)
     creation_date = models.DateTimeField()
-
 
     def __str__(self):
         return self.name
 
 
 @register(database, app_name)
-class Guests(models.Model):
+class Guest(models.Model):
     id = models.AutoField(primary_key=True)
     user_id = models.ForeignKey(User, on_delete=models.CASCADE)
     board_id = models.ForeignKey(Board, on_delete=models.CASCADE)

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>Kanboard - Dashboard</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'stylesheets/main.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'stylesheets/style.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'stylesheets/animations.css' %}">
+    <script type="application/javascript" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script type="application/javascript" src="{% static 'scripts/validators.js' %}"></script>
+    <script type="application/javascript" src="{% static 'scripts/micro.js' %}"></script>
+    <script type="application/javascript" src="{% static 'scripts/modals.js' %}"></script>
+    <script type="application/javascript" src="{% static 'scripts/messages.js' %}"></script>
+</head>
+<body id="dashboard">
+    <nav>
+        <div class="logo">
+            <h1>Kanboard</h1>
+        </div>
+        <button class="button action">Add board</button>
+        <button class="ghost-button"></button>
+        <button id="logout" class="button logout">Logout</button>
+    </nav>
+    <div class="dashboard violet-background">
+
+        {% for board in boards_owned %}
+           <div class="board-silhouette">
+               <div>
+                    <img class="board-image" src="{{ board.image }}" alt="Board image">
+                    <h2>{{ board.name }}</h2>
+                    <p>{{ board.cards.count }} cards</p>
+                </div>
+            </div>
+        {% endfor %}
+
+        {% for board in boards_guested %}
+           <div class="board-silhouette">
+               <div>
+                    <img class="board-image" src="{{ board.image }}" alt="Board image">
+                    <h2>{{ board.name }}</h2>
+                    <p>{{ board.cards.count }} cards</p>
+                </div>
+            </div>
+        {% endfor %}
+
+        <div class="board-silhouette">
+            <div class="cross">
+                <img src="{% static 'assets/icons/plus.svg' %}" alt="Board" class="filter-white">
+            </div>
+        </div>
+    </div>
+    <script>
+        document.querySelector('#logout').addEventListener('click', () => triggerMicro("{% url 'authentication:logout' %}", [], displayMessage, displayMessage))
+    </script>
+</body>
+</html>

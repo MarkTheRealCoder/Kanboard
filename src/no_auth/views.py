@@ -8,17 +8,17 @@ from static.services import RequestHandler, JsonResponses
 HANDLER = RequestHandler(BASE_DIR / 'db.sqlite3')
 
 
-@HANDLER.bind('index', '')
+@HANDLER.bind('index', '', request="GET")
 def index(request): # Display view
     return render(request, 'index.html')
 
 
-@HANDLER.bind('login', 'login/')
+@HANDLER.bind('login', 'login/', request="GET")
 def login(request): # Display view
     return render(request, 'login.html')
 
 
-@HANDLER.bind('register', 'register/')
+@HANDLER.bind('register', 'register/', request="GET")
 def register(request): # Display view
     return render(request, 'register.html')
 
