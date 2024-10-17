@@ -1,6 +1,9 @@
 import unittest
 from unittest import TestCase
+from wsgiref.validate import validator
 
+from static.services import ModelsAttributeError
+from static.services.validations import UserValidations, ColumnValidations
 from database import DBRequestBuilder, DBHybridTable, _FormatError, _meta_model as meta_model
 
 
@@ -118,3 +121,126 @@ class DBRequestBuilderTest(unittest.TestCase):
                     .complex("WHERE name='Stefano'")
         self.assertEqual(actual, self.builder.query())
 
+    class TestUserValidations(unittest.TestCase):
+
+        def create_image(self, size, content_type):
+            return {
+                'size': size,
+                'content_type': content_type
+            }
+
+        def test_validate_username_too_long(self):
+            validation = UserValidations(None, username="ThisUsernameIsWayTooLongForValidation12345")
+            self.assertRaises(ModelsAttributeError, validation.result)
+
+        def test_validate_username_invalid_characters(self):
+            validation = UserValidations(None, username="Invalid!Username")
+            self.assertRaises(ModelsAttributeError, validation.result)
+
+        def test_validate_email_invalid_format(self):
+            validation = UserValidations(None, email="invalidemail.com")
+            self.assertRaises(ModelsAttributeError, validation.result)
+
+        def test_validate_password_invalid(self):
+            validation = UserValidations(None, password="short")
+            self.assertRaises(ModelsAttributeError, validation.result)
+
+        def test_validate_image_invalid_format(self):
+            validation = UserValidations(None, image=self.create_image(1024 * 1024, 'image/gif'))
+            self.assertRaises(ModelsAttributeError, validation.result)
+
+        def test_validate_image_too_large(self):
+            validation = UserValidations(None, image=self.create_image(5 * 1024 * 1024, 'image/jpeg'))
+            self.assertRaises(ModelsAttributeError, validation.result)
+
+        def test_validate_correct_username(self):
+            try:
+                validation = UserValidations(None, username="ValidUsername")
+                validation.result()
+            except ModelsAttributeError:
+                self.fail("validate_username() raised ModelsAttributeError unexpectedly")
+
+        def test_validate_correct_email(self):
+            try:
+                validation = UserValidations(None, email="valid_email@example.com")
+                validation.result()
+            except ModelsAttributeError:
+                self.fail("validate_email() raised ModelsAttributeError unexpectedly")
+
+        def test_validate_correct_password(self):
+            try:
+                validation = UserValidations(None, password="ValidPass123!")
+                validation.result()
+            except ModelsAttributeError:
+                self.fail("validate_password() raised ModelsAttributeError unexpectedly")
+
+        def test_validate_correct_image(self):
+            try:
+                validation = UserValidations(None, image=self.create_image(1024 * 1024, 'image/jpeg'))
+                validation.result()
+            except ModelsAttributeError:
+                self.fail("validate_image() raised ModelsAttributeError unexpectedly")
+
+    class TestColumnValidations(unittest.TestCase):
+
+        def create_image(self, size, content_type):
+            return {
+                'size': size,
+                'content_type': content_type
+            }
+
+        def test_validate_title_too_long(self):
+            validation = ColumnValidations(title="This title is definitely too long")
+            self.assertRaises(ModelsAttributeError, validation.result)
+
+        def test_validate_title_invalid_characters(self):
+            validation = ColumnValidations(title="Invalid title with !@#$%^")
+            self.assertRaises(ModelsAttributeError, validation.result)
+
+        def test_validate_description_too_long(self):
+            validation = ColumnValidations(description='a' * 257)
+            self.assertRaises(ModelsAttributeError, validation.result)
+
+        def test_validate_description_invalid_characters(self):
+            validation = ColumnValidations(description="Invalid description with & symbols")
+            self.assertRaises(ModelsAttributeError, validation.result)
+
+        def test_validate_color_invalid(self):
+            validation = ColumnValidations(color="123456")
+            self.assertRaises(ModelsAttributeError, validation.result)
+
+        def test_validate_image_too_large(self):
+            validation = ColumnValidations(image=self.create_image(4 * 1024 * 1024, 'image/jpeg'))
+            self.assertRaises(ModelsAttributeError, validation.result)
+
+        def test_validate_image_invalid_format(self):
+            validation = ColumnValidations(image=self.create_image(1024 * 1024, 'image/gif'))
+            self.assertRaises(ModelsAttributeError, validation.result)
+
+        def test_validate_correct_title(self):
+            try:
+                validation = ColumnValidations(title="Valid Title")
+                validation.result()
+            except ModelsAttributeError:
+                self.fail("validate_title() raised ModelsAttributeError unexpectedly")
+
+        def test_validate_correct_description(self):
+            try:
+                validation = ColumnValidations(description="This is a valid description.")
+                validation.result()
+            except ModelsAttributeError:
+                self.fail("validate_description() raised ModelsAttributeError unexpectedly")
+
+        def test_validate_correct_color(self):
+            try:
+                validation = ColumnValidations(color="#1A2B3C")
+                validation.result()
+            except ModelsAttributeError:
+                self.fail("validate_color() raised ModelsAttributeError unexpectedly")
+
+        def test_validate_correct_image(self):
+            try:
+                validation = ColumnValidations(image=self.create_image(1024 * 1024, 'image/jpeg'))
+                validation.result()
+            except ModelsAttributeError:
+                self.fail("validate_image() raised ModelsAttributeError unexpectedly")
