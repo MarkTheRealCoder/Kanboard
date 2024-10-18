@@ -91,9 +91,12 @@ class RequestHandler:
 
         for dbreq in dbrequests:
             try:
-                arguments[dbreq.name()] = self.___get_from_db(dbreq.query(**kwargs))
+                value = self.___get_from_db(dbreq.query(**arguments))
+                if isinstance(value, list) and len(value) == 1:
+                    value = value[0]
+                arguments[dbreq.name] = value
             except _DatabaseError as e:
-                return HttpResponse(dbreq.message())
+                return HttpResponse(dbreq.message)
 
         arguments.pop('uuid')
 

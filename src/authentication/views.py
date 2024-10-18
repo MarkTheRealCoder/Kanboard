@@ -1,4 +1,5 @@
-from datetime import timezone
+from datetime import timezone, datetime
+from uuid import UUID
 
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
@@ -9,7 +10,7 @@ from django.utils import timezone
 from Kanboard.settings import BASE_DIR
 
 from static.services import RequestHandler, ModelsAttributeError, UserValidations, JsonResponses, DBQuery, DBTable
-from static.utils.utils import response_error, get_user_from, response_success
+from static.utils.utils import response_error, get_user_from, response_success, check_board_invalid, check_user_invalid
 from .models import User
 
 # Create your views here.
@@ -41,14 +42,6 @@ def registration_submission(request):
     request.session['uuid'] = uuid
     request.session.set_expiry(0)
 
-    print("Registered user")
-    print("\tUUID:", uuid)
-    print("\tUsername:", required_fields['username'])
-    print("\tEmail:", required_fields['email'])
-    print("\tName:", required_fields['name'])
-    print("\tSurname:", required_fields['surname'])
-    print("\tPassword:", required_fields['password'])
-
     return redirect(reverse('core:dashboard'))
 
 
@@ -78,7 +71,7 @@ def login_submission(request):
     if not user:
         return response_error(f"{field.title()} or password are incorrect.")
 
-    request.session['uuid'] = str(user.uuid)
+    request.session['uuid'] = user.uuid.hex
     request.session.set_expiry(0)
 
     return redirect(reverse('core:dashboard'))
@@ -112,6 +105,8 @@ def user_management(request):
         UserValidations(User, **updates).result()
 
         if img := updates.get('image', None):
+            random_name = f"{uuid}{img.name[img.name.rfind('.'):]}"
+            img.name = random_name
             user.image = img
         if name := updates.get('name', None):
             user.name = name
@@ -139,6 +134,7 @@ def logout(request): # Working view
 queries = (
     DBQuery("user", "You are not logged in.")
         .filter(_user_uuid="PARAM(uuid)")
+        .only("name", "surname", "email", "username", "image", "date_joined")
         .from_table(DBTable("User")),
 )
 
@@ -151,10 +147,18 @@ def user_details_view(request, user):
     :return: HttpResponse - The rendered HTML page with user details.
     """
 
-    if not user:
-        return response_error("No user found with this ID!")
+    class UserInterface:
+        def __init__(self, _user):
+            self.name = _user[0]
+            self.surname = _user[1]
+            self.email = _user[2]
+            self.username = _user[3]
+            self.image = _user[4]
+            self.days_membership = (datetime.now() - datetime.strptime(_user[5], "%Y-%m-%d %H:%M:%S.%f")).days # '2024-10-18 15:54:26.643385'
 
-    return render(request, "user_details.html", {
+    user = UserInterface(user)
+
+    return render(request, "profile.html", {
         "user": user
     })
 

@@ -10,11 +10,11 @@ app_name = "authentication"
 
 @register(database, app_name)
 class User(models.Model):
-    uuid = models.UUIDField(primary_key=True)
+    uuid = models.UUIDField(primary_key=True, editable=False)
     username = models.CharField(max_length=16, unique=True)
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=32)
-    image = models.ImageField()
+    image = models.ImageField(upload_to ='uploads/')
     name = models.CharField(max_length=32)
     surname = models.CharField(max_length=32)
 

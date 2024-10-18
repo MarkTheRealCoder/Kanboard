@@ -49,5 +49,3 @@ def get_cards_of_board(card, board_id: int) -> QuerySet[Card]:
 def get_expired_cards_of_board(card, board_id: int) -> QuerySet[Card]:
     return card.objects.filter(board_id=board_id, expiration_date__lt=timezone.now())
 
-# Minchia ma che è sto file? il muro del pianto?
-# Per rimanere in tema: La muraglia cinese

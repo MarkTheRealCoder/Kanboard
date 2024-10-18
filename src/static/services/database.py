@@ -1,5 +1,6 @@
 import re
 import sqlite3
+from uuid import UUID
 
 
 class _FormatError(Exception):
@@ -105,12 +106,11 @@ class DBQuery:
         self.___from = f"_{table}_" if isinstance(table, str) else str(table)
         return self
 
-    def __str__(self, **kwargs):
+    def query(self, **kwargs):
         query = f"SELECT {self.___select} FROM {self.___from}"
         if self.___where:
             query += f" WHERE {self.___where}"
-        query = self.___parse_param(query, **kwargs)
-        return query
+        return self.___parse_param(query, **kwargs)
 
     def ___parse_param(self, query: str, **kwargs):
         """
@@ -123,11 +123,21 @@ class DBQuery:
         for i in re.findall("PARAM\\(([A-Za-z_]+[A-Za-z0-9_]*)\\)", condition_copy):
             if i not in kwargs.keys():
                 raise _FormatError(f"Invalid argument: {i} is not part of the function arguments")
-            value = kwargs.get(i)
+            value = self.___value_type_parse(kwargs.get(i))
             if value is None:
                 value = "NULL"
             condition_copy = condition_copy.replace(f"PARAM({i})", str(value))
         return condition_copy
+
+    def ___value_type_parse(self, value):
+        if value is None:
+            return None
+        parsed = str(value)
+        if isinstance(value, bool):
+            parsed = parsed.upper()
+        elif isinstance(value, str):
+            parsed = f"'{parsed}'"
+        return parsed
 
     @property
     def name(self):
@@ -137,11 +147,12 @@ class DBQuery:
         return self.___name
 
     @property
-    def error_message(self):
+    def message(self):
         """
         Returns the error message of the DBQuery instance.
         """
         return self.___error_message
+
 
 
 class _DBReference:
@@ -188,8 +199,8 @@ class _DBReference:
         value = None
 
         try:
-            value = _DBReference.___databases.get(database, None)
-            value = value.get(model_name, None)
+            value = _DBReference.___databases.get(database)
+            value = value.get(model_name.lower())
         except Exception as e:
             del e
             raise_error = True
@@ -240,7 +251,11 @@ class _DBServices:
         :return: str - The parsed query
         """
         condition_copy = query
-        for i in re.findall("_([A-Za-z_]+[A-Za-z0-9_]*)_", condition_copy):
+        for i in re.findall("_([A-Za-z_]+[A-Za-z0-9_]*)_([A-Za-z_]+[A-Za-z0-9_]*)", condition_copy): # Fields
+            model = _DBReference.find(self.___db_path, i[0])
+            condition_copy = condition_copy.replace(f"_{i[0]}_{i[1]}", f"{model}.{i[1]}")
+
+        for i in re.findall("_([A-Za-z_]+[A-Za-z0-9_]*)_", condition_copy):                          # Tables
             model = _DBReference.find(self.___db_path, i)
             condition_copy = condition_copy.replace(f"_{i}_", model)
         return condition_copy

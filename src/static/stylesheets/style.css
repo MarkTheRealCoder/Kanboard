@@ -487,6 +487,10 @@ nav button.blue:hover {
     margin-right: 100px;
 }
 
+.profile h2 {
+    text-align: center;
+}
+
 th {
     background-color: #1e1e1e;
     color: #fff;
@@ -571,5 +575,50 @@ div#modal-wrapper {
     display: none;
 }
 
+#confirm {
+    width: 100%;
+    border-radius: 8px;
+    border: none;
+    display: flex;
+    place-content: center;
+}
 
+.form-box img#propic {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    border: 2px solid var(--gray);
+}
 
+.form-box img#propic:hover {
+    cursor: pointer;
+    background-color: grey;
+}
+
+.profile.form-box {
+    width: 560px;
+}
+
+#profile-image {
+    margin: 1.5em 0;
+    display: flex;
+    justify-content: center;
+}
+
+#edit-image {
+    cursor: pointer;
+    display: none;
+    position: absolute;
+    top: 13%;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background-color: rgba(17, 17, 17, 0.75);
+}
+
+#edit-image img {
+    --margins: 4em;
+    margin-top: var(--margins);
+    width: calc(100% - (2 * var(--margins)));
+    height: calc(100% - (2 * var(--margins)));
+}

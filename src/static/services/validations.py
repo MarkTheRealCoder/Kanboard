@@ -40,7 +40,7 @@ class UserValidations:
 
     def generate_uuid(self):
         import uuid
-        return uuid.uuid1()
+        return uuid.uuid4().hex
 
     def result(self) -> 'UserValidations':
         self.___validate_name()

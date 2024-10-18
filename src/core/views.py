@@ -457,11 +457,17 @@ def burndown_view(request, board_id):
 @requires_csrf_token
 def dashboard(request):
 
+    print("access to dashboard")
+
     uuid = get_user_from(request)
+    print("from uuid: " + uuid)
     user = User.objects.filter(uuid=uuid).first()
+    print("from user: " + str(user))
 
     if user is None:
         return response_error("User not found.")
+
+    print("user found")
 
     boards_owned = Board.objects.filter(owner=uuid).all()
 
