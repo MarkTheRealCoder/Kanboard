@@ -16,12 +16,15 @@
     <script type="application/javascript" src="{% static 'scripts/messages.js' %}"></script>
 </head>
 <body id="dashboard">
+    <p id="service-message"></p>
     <nav>
         <div class="logo">
             <h1>Kanboard</h1>
         </div>
         <button class="ghost-button"></button>
-        <button class="button logout">Logout</button>
+        <button id="logout" class="button logout">
+            Logout
+        </button>
     </nav>
     <div class="dashboard violet-background justify-center">
         <section class="first-section">
@@ -34,11 +37,11 @@
                     <div class="cross">
                     </div>
                     {% if user.image %}
-                        <img src="{{ user.image }}" alt="User's propic">
+                        <img src="{{ user.image }}" alt="User's propic" id="propic">
                     {% else %}
                         <img src="../../static/assets/images/board_image_example.png" alt="User's propic" id="propic">
                     {% endif %}
-                    <input id="new-profile-image" type="file" name="image" style="display: none;">
+                    <input id="image" type="file" name="image" accept="image/*" style="display: none;">
                 </div>
                 <div class="name-surname-row">
                     <div class="input-container">
@@ -64,14 +67,40 @@
                 </div>
                 <p>Thanks for being a member of our community for {{ user.days_membership }} days!</p>
 
-                <button id="confirm" class="submit-button">Save</button>
+                <div>
+                    <button type="submit" id="confirm" class="button submit-button">Save</button>
+                    <button type="submit" id="discard" class="button discard-button">Discard changes</button>
+                </div>
                 <script>
-                    document.querySelector('#confirm').addEventListener('click', () => {
-                        triggerMicro("{% url 'authentication:user_management' %}", ['name', 'surname', 'email', 'password', 'image'], displayMessage, displayMessage)
+                    document.querySelector('#logout').addEventListener('click', () => {
+                        triggerMicro("{% url 'authentication:logout' %}", [], displayMessage, displayMessage)
+                    });
+
+                    document.querySelector('#confirm').addEventListener('click', (event) => {
+                        event.preventDefault();
+                        console.log("Prevented!");
+                        triggerMicro("{% url 'authentication:user_management' %}", ['name', 'surname', 'email', 'password', 'image'], displayMessage, displayMessage);
+                    });
+
+                    document.querySelector('input').addEventListener('change', (event) => {
+                        $('#discard').prop('disabled', false);
                     })
 
                     const edit_image = $('#edit-image');
-                    edit_image.on('click', (e) => {$('#new-profile-image').click()}) 
+                    edit_image.on('click', (e) => {$('#image').click()})
+
+                    $('#image').change((e) => {
+                        console.log("Ciao");
+                        const file = e.target.files[0];
+                        const reader = new FileReader();
+
+                        reader.onload = (e) => {
+                            console.log("Riciao")
+                            $('#propic').attr('src', e.target.result);
+                        }
+
+                        reader.readAsDataURL(file);
+                    })
 
                     $('#profile-image > img').hover(() => {edit_image.show()}, () => {})
                     edit_image.hover(() => {}, () => {edit_image.hide()})

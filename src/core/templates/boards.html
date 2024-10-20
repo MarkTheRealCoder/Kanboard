@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <title>Kanboard - Boards</title>
+    <title>Kanboard - {{ board.name }}</title>
     <link rel="stylesheet" type="text/css" href="{% static 'stylesheets/main.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'stylesheets/style.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'stylesheets/animations.css' %}">
@@ -16,16 +16,18 @@
     <script type="application/javascript" src="{% static 'scripts/messages.js' %}"></script>
 </head>
 <body id="dashboard">
+    <p id="service-message"></p>
+    <div id="modal-wrapper"><div id="modal"></div></div>
     <nav>
         <div class="logo">
             <h1>Kanboard</h1>
         </div>
-        <button class="button action">Add column</button>
-        <button class="button action">Add card</button>
-        <button class="button action">Add user</button>
-        <button class="button action blue">Burndown</button>
+        <button id="add-column" class="button action">Add column</button>
+        <button id="add-card" class="button action">Add card</button>
+        <button id="add-user" class="button action">Add user</button>
+        <button id="burndown" class="button action blue">Burndown</button>
         <button class="ghost-button"></button>
-        <button class="button logout">Logout</button>
+        <button id="logout" class="button logout">Logout</button>
     </nav>
     <div class="dashboard violet-background">
         <div class="board-silhouette column-silhouette">
@@ -83,5 +85,29 @@
             </div>
         </div>
     </div>
+    <script>
+        document.querySelector('#logout')
+                .addEventListener('click', () => triggerMicro("{% url 'authentication:logout' %}", [], displayMessage, displayMessage))
+
+        document.querySelector('#add-column')
+                .addEventListener('click', () => {
+                    console.log("adding column")
+                })
+
+        document.querySelector('#add-card')
+                .addEventListener('click', () => {
+                    console.log("adding card")
+                })
+
+        document.querySelector('#add-user')
+                .addEventListener('click', () => {
+                    console.log("adding user")
+                })
+
+        document.querySelector('#burndown')
+                .addEventListener('click', () => {
+                    window.location.href = "{% url 'core:burndown' board_id=board.id %}"
+                })
+    </script>
 </body>
 </html>

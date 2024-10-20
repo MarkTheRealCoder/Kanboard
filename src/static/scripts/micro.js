@@ -1,5 +1,7 @@
 function triggerMicro(path, names = [], onSuccess = function(x){}, onFailure = function(x){})
 {
+    console.log("Sending MicroRequestEvent to: " + path);
+
     const event = new CustomEvent('MicroRequestEvent', {
         detail: {
             path: path,
@@ -59,7 +61,7 @@ function getParams(names)
         }
 
         if (inputElement) {
-            params[name] = inputElement[key];
+            params[name] = (name !== 'image') ? inputElement[key] : inputElement.files.length > 0 ? inputElement.files[0] : '';
         }
         else {
             console.warn(`Input field with name or ID '"${name}"' not found`);
@@ -78,13 +80,21 @@ function sendRequest(event)
     const onSuccess = event.detail.onSuccess;
     const onFailure = event.detail.onFailure;
 
+    let is_multiparted = params.hasOwnProperty('image') && params.image;
+    let contentType = (is_multiparted) ? '' : 'application/x-www-form-urlencoded';
+    const headers = is_multiparted ? {'X-CSRFToken': getCSRFToken()} : {'X-CSRFToken': getCSRFToken(), 'Content-Type': contentType}
+
+    const form = (is_multiparted) ? new FormData() : new URLSearchParams(params);
+    if (is_multiparted) {
+        for (let param in params) {
+            form.append(param, params[param]);
+        }
+    }
+
     fetch(serverPath, {
         method: 'POST',
-        headers: {
-            'X-CSRFToken': getCSRFToken(),
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams(params)
+        headers: headers,
+        body: form
     })
     .then(response => {
         if (response.ok) {

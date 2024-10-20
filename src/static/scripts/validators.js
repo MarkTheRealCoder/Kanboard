@@ -33,6 +33,7 @@ function validateSurname(surname) {
 
 function validateImage(image) {
     const re = /^image\/(jpeg|png|jpg)$/;
+    console.log(re.test(image.type))
     return validationResult(re.test(image.type), "Invalid image format");
 }
 
@@ -82,6 +83,3 @@ const validators = [
     {validator: validateCardTitle, label: "card_title"},
     {validator: validateCardDescription, label: "card_description"},
 ]
-
-
-// export {validators}

@@ -47,6 +47,7 @@ class RequestHandler:
         :param query: str - The query to execute.
         :return: Any - The result of the query execution.
         """
+        print("DEBUG INIT: " + query)
         return self.___dbservice.execute(query)
 
     def bind(self, _name: str, _path: str, *data: tuple[DBQuery], session: bool = False, request: str = None):
@@ -96,6 +97,7 @@ class RequestHandler:
                     value = value[0]
                 arguments[dbreq.name] = value
             except _DatabaseError as e:
+                print(e)
                 return HttpResponse(dbreq.message)
 
         arguments.pop('uuid')

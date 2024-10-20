@@ -8,7 +8,7 @@
 body {
     font-family: Inter, sans-serif;
     color: var(--white);
-    background-color: var(--dark-gray);
+    background: var(--deep-blue);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -284,6 +284,7 @@ footer ul li {
 nav {
     display: flex;
     justify-content: space-between;
+    background: var(--dark-gray);
     align-items: center;
     padding: 1em;
     width: 100%;
@@ -353,22 +354,59 @@ nav button.blue:hover {
     display: flex;
     justify-content: center;
     align-items: center;
+    flex-direction: column;
     height: 90%;
     width: 350px;
     border: 1px solid grey;
     border-radius: 25px;
-    background-color: var(--deep-blue);
+    background-color: inherit;
     color: #fff;
     margin-left: 3em;
+    padding: 10px 0;
+}
+
+.board-guested {
+    border-color: var(--accent);
 }
 
 .board-silhouette:hover {
-    background-color: rgba(255, 255, 255, 0.1);
     cursor: pointer;
 }
 
-.board-silhouette p {
+.board-silhouette:not(:has(.cross)):hover {
+    transition: transform 0.35s ease-in-out;
+    background-color: rgba(255, 255, 255, .05);
+    transform: scale(1.06);
+}
+
+.board-silhouette:has(.cross):hover {
+    background-color: rgba(255, 255, 255, .05);
+}
+
+.board-silhouette .board-image {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    margin-bottom: 1em;
+}
+
+.board-silhouette h2 {
     text-align: center;
+    text-decoration: underline;
+     margin-bottom: 1em;
+}
+
+.board-silhouette p {
+    text-align: justify;
+    width: 80%;
+    height: fit-content;
+    overflow-wrap: break-word;
+    padding: 5px 10px;
+    border-radius: 8px;
+    flex: 0 1 auto;
+    color: #a8a8a8;
+    background-color: #1e1e1e;
+    overflow: auto;
 }
 
 .board-silhouette .cross {
@@ -378,15 +416,6 @@ nav button.blue:hover {
 .board-silhouette.column-silhouette {
     background-color: var(--dark-gray);
     cursor: inherit;
-}
-
-.board-silhouette h2 {
-    text-align: center;
-}
-
-.board-silhouette .board-image {
-    width: 150px;
-    height: 150px;
 }
 
 .column-silhouette {
@@ -475,6 +504,15 @@ nav button.blue:hover {
     justify-content: center;
     align-items: center;
     width: 100%;
+    padding-top: 5%;
+}
+
+.dashboard:has(section.burndown) {
+    display: block;
+}
+
+.dashboard > .burndown {
+
 }
 
 .burndown img {
@@ -482,7 +520,7 @@ nav button.blue:hover {
     height: 600px;
 }
 
-.burndown table {
+.burndown > table {
     height: fit-content;
     margin-right: 100px;
 }
@@ -497,7 +535,7 @@ th {
     padding: .8em;
 }
 
-th:first-child {
+th#transparent {
     background-color: transparent;
 }
 
@@ -575,12 +613,32 @@ div#modal-wrapper {
     display: none;
 }
 
-#confirm {
+.discard-button {
     width: 100%;
+    margin-top: 2em;
+    padding: 15px;
+    background-color: #d9534f;
+    color: var(--white);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 18px;
+}
+
+.discard-button:hover {
+    background-color: #c9302c;
+}
+
+#confirm, #discard {
+    width: 48%;
     border-radius: 8px;
     border: none;
     display: flex;
     place-content: center;
+}
+
+#discard:disabled {
+    background-color: var(--square-red);
 }
 
 .form-box img#propic {
@@ -621,4 +679,19 @@ div#modal-wrapper {
     margin-top: var(--margins);
     width: calc(100% - (2 * var(--margins)));
     height: calc(100% - (2 * var(--margins)));
+}
+
+#profile-button {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .55em 1.5em;
+    height: fit-content;
+    width: fit-content;
+}
+
+button img {
+    width: 30px;
+    height: 30px;
+    margin-right: .7em;
 }

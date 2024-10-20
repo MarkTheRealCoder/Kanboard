@@ -14,7 +14,7 @@ app_name = "core"
 @register(database, app_name)
 class Board(models.Model):
     id = models.AutoField(primary_key=True)
-    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, db_column="owner")
     name = models.CharField(max_length=100)
     description = models.TextField()
     image = models.ImageField(blank=True, null=True)
@@ -27,8 +27,8 @@ class Board(models.Model):
 @register(database, app_name)
 class Guest(models.Model):
     id = models.AutoField(primary_key=True)
-    user_id = models.ForeignKey(User, on_delete=models.CASCADE)
-    board_id = models.ForeignKey(Board, on_delete=models.CASCADE)
+    user_id = models.ForeignKey(User, on_delete=models.CASCADE, db_column="user_id")
+    board_id = models.ForeignKey(Board, on_delete=models.CASCADE, db_column="board_id")
 
     class Meta:
         unique_together = ('user_id', 'board_id')
@@ -40,7 +40,7 @@ class Guest(models.Model):
 @register(database, app_name)
 class Column(models.Model):
     id = models.AutoField(primary_key=True)
-    board_id = models.ForeignKey(Board, on_delete=models.CASCADE)
+    board_id = models.ForeignKey(Board, on_delete=models.CASCADE, db_column="board_id")
     title = models.CharField(max_length=100)
     color = models.CharField(max_length=7)
     description = models.TextField()
@@ -56,8 +56,8 @@ class Column(models.Model):
 @register(database, app_name)
 class Card(models.Model):
     id = models.AutoField(primary_key=True)
-    board_id = models.ForeignKey(Board, on_delete=models.CASCADE)
-    column_id = models.ForeignKey(Column, on_delete=models.CASCADE)
+    board_id = models.ForeignKey(Board, on_delete=models.CASCADE, db_column="board_id")
+    column_id = models.ForeignKey(Column, on_delete=models.CASCADE, db_column="column_id")
     title = models.CharField(max_length=100)
     description = models.TextField()
     color = models.CharField(max_length=7)

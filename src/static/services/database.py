@@ -212,7 +212,7 @@ class _DBReference:
 
 
 register = _DBReference.register
-
+DEBUG_ENABLED = True
 
 class _DBServices:
     """
@@ -239,6 +239,8 @@ class _DBServices:
         query = self.___parse_table(query)
         with sqlite3.connect(self.___db_path) as conn:
             try:
+                if DEBUG_ENABLED:
+                    print("[DEBUG] Executing query: " + query)
                 value = conn.cursor().execute(query).fetchall()
             except sqlite3.Error as e:
                 raise _DatabaseError(f"An error occurred: {e}")

@@ -34,8 +34,8 @@ def registration_submission(request):
 
     try:
         uuid = str(UserValidations(User, **required_fields).result().generate_uuid())
-    except ModelsAttributeError as e:
-        return JsonResponses.response(JsonResponses.ERROR, f'Something went wrong:\n{str(e)}.')
+    except ModelsAttributeError:
+        return response_error("Could not register your account.")
 
     User.objects.create(uuid=uuid, **required_fields).save()
 
@@ -78,6 +78,7 @@ def login_submission(request):
 
 
 @HANDLER.bind('user_management', 'account/changes/', request="POST", session=True)
+@requires_csrf_token
 def user_management(request):
 
     uuid = get_user_from(request)
@@ -90,38 +91,42 @@ def user_management(request):
         'image': None
     }
 
-    for key in updates.keys():
-        if not key in request.POST.keys():
-            updates.pop(key)
-            continue
-        updates[key] = request.POST.get(key)
+    print(request.POST)
+    print(request.FILES)
+    return response_success("Ancora non funziona bro!")
 
-    if img := request.FILES.get('image', None):
-        updates['image'] = request.FILES.get('image')
-
-    try:
-        user = User.objects.filter(uuid=uuid).first()
-
-        UserValidations(User, **updates).result()
-
-        if img := updates.get('image', None):
-            random_name = f"{uuid}{img.name[img.name.rfind('.'):]}"
-            img.name = random_name
-            user.image = img
-        if name := updates.get('name', None):
-            user.name = name
-        if surname := updates.get('surname', None):
-            user.surname = surname
-        if email := updates.get('email', None):
-            user.email = email
-        if password := updates.get('password', None):
-            user.password = password
-
-        user.save()
-    except ModelsAttributeError:
-        return response_error('Could not update your account details.')
-
-    return response_success('Your account details has been updated successfully.')
+    # for key in updates.keys():
+    #     if not key in request.POST.keys():
+    #         updates.pop(key)
+    #         continue
+    #     updates[key] = request.POST.get(key)
+    #
+    # if img := request.FILES.get('image', None):
+    #     updates['image'] = request.FILES.get('image')
+    #
+    # try:
+    #     user = User.objects.filter(uuid=uuid).first()
+    #
+    #     UserValidations(User, **updates).result()
+    #
+    #     if img := updates.get('image', None):
+    #         random_name = f"{uuid}{img.name[img.name.rfind('.'):]}"
+    #         img.name = random_name
+    #         user.image = img
+    #     if name := updates.get('name', None):
+    #         user.name = name
+    #     if surname := updates.get('surname', None):
+    #         user.surname = surname
+    #     if email := updates.get('email', None):
+    #         user.email = email
+    #     if password := updates.get('password', None):
+    #         user.password = password
+    #
+    #     user.save()
+    # except ModelsAttributeError:
+    #     return response_error('Could not update your account details.')
+    #
+    # return response_success('Your account details has been updated successfully.')
 
 
 @HANDLER.bind('logout', 'logout/', request='POST', session=True)
@@ -138,9 +143,9 @@ queries = (
         .from_table(DBTable("User")),
 )
 
-@HANDLER.bind("user_details", "account/", *queries, request='GET', session=True)
+@HANDLER.bind("profile", "account/", *queries, request='GET', session=True)
 @requires_csrf_token
-def user_details_view(request, user):
+def profile(request, user):
     """
     Executes the query to retrieve user details after login.
     :param request: HttpRequest - The HTTP request object.
@@ -154,7 +159,7 @@ def user_details_view(request, user):
             self.email = _user[2]
             self.username = _user[3]
             self.image = _user[4]
-            self.days_membership = (datetime.now() - datetime.strptime(_user[5], "%Y-%m-%d %H:%M:%S.%f")).days # '2024-10-18 15:54:26.643385'
+            self.days_membership = (datetime.now() - datetime.strptime(_user[5], "%Y-%m-%d %H:%M:%S.%f")).days
 
     user = UserInterface(user)
 

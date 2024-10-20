@@ -21,31 +21,39 @@
             <h1>Kanboard</h1>
         </div>
         <button class="ghost-button"></button>
-        <button class="button logout">Logout</button>
+        <button id="logout" class="button logout">Logout</button>
     </nav>
-    <div class="dashboard violet-background justify-center">
+    <div class="dashboard">
         <section class="burndown first-section">
             <table>
                 <tr>
-                    <th></th>
+                    <th id="transparent"></th>
                     <th>Number of:</th>
                 </tr>
                 <tr>
                     <td>Cards</td>
-                    <td>##</td>
-                </tr>
-                <tr>
-                    <td>Cards (for each column)</td>
-                    <td>##</td>
+                    <td>{{ total_cards }}</td>
                 </tr>
                 <tr>
                     <td>Expired Cards</td>
-                    <td>##</td>
+                    <td>{{ expired_cards }}</td>
                 </tr>
                 <tr>
                     <td>Story points used</td>
-                    <td>##</td>
+                    <td>{{ total_story_points }}</td>
                 </tr>
+            </table>
+            <table>
+                <tr>
+                    <th>Column name:</th>
+                    <th>Number of Cards:</th>
+                </tr>
+                {% for column in cards_per_column %}
+                <tr>
+                    <td>{{ column.name }}</td>
+                    <td>{{ column.card_count }}</td>
+                </tr>
+                {% endfor %}
             </table>
             <img src="../../static/assets/images/burndown_example.png" alt="Graph">
         </section>

@@ -1,6 +1,6 @@
 from io import BytesIO
 
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.template.context_processors import request
 from django.views.decorators.csrf import requires_csrf_token
@@ -19,52 +19,49 @@ from static.utils.utils import get_user_from, response_error, get_board, \
 HANDLER = RequestHandler(BASE_DIR / 'db.sqlite3')
 
 
-# data = (
-#     DBRequestBuilder("board_details", "No board found with this ID!")
-#     .select("id", "name", "description", "image", "creation_date")
-#     .from_table("boards")
-#     .where("id = PARAM(board_id)"),
-# )
-#
-#
-# @HANDLER.bind("board_details", "<int:board_id>/board_details", *data)
-# def board_details_view(request, board_id, board_details):
-#     """
-# """Executes the query to retrieve board details.
-#     :param request: HttpRequest - The HTTP request object.
-#     :param board_details: str - The result of the board details query.
-#     :return: HttpResponse - The rendered HTML page with board details."""
-# """
-#     return render(request, "board_details.html", {
-#         "board": board_details
-#     })
-#
-#
-# data = (
-#     DBRequestBuilder("board_columns", "No columns found for this board!")
-#     .select("id", "title", "color", "description", "index")
-#     .from_table("columns")
-#     .where("board_id = PARAM(board_id)"),
-# )
-#
-#
-# @HANDLER.bind("board_columns", "<int:board_id>/board_columns", *data)
-# def board_columns_view(request, board_id, board_columns):
-#     """
-# """Executes the query to retrieve the columns of a specific board.
-#
-#     Parameters:
-#     - request: HttpRequest object containing the request details.
-#     - board_id: The ID of the board whose columns will be retrieved.
-#     - board_columns: The result of the board columns query.
-#
-#     Returns:
-#     - HttpResponse: The rendered HTML page with the list of columns."""
-# """
-#     return render(request, "board_columns.html", {
-#         "columns": board_columns
-#     })
-#
+@HANDLER.bind("board", "board/<int:board_id>", session=True, request="GET")
+def board_view(request, board_id):
+
+    uuid = get_user_from(request)
+    board = get_board(Board, board_id)
+
+    if check_board_invalid(board):
+        return response_error("Board not found.")
+
+    if check_user_not_owner_or_guest(Board, Guest, uuid, board_id):
+        return response_error("You do not have access to this board.")
+
+    board_info = {
+        'id': board.id,
+        'name': board.name,
+        'description': board.description,
+        'image': board.image,
+        'creation_date': board.creation_date
+    }
+
+    return render(request, "boards.html", {
+        "board": board_info
+    })
+
+
+@HANDLER.bind("columns", "columns/<int:board_id>", session=True, request="POST")
+def columns_view(request, board_id):
+
+    uuid = get_user_from(request)
+    board = get_board(Board, board_id)
+
+    if check_board_invalid(board):
+        return response_error("Board not found.")
+
+    if check_user_not_owner_or_guest(Board, Guest, uuid, board_id):
+        return response_error("You do not have access to this board.")
+
+    columns = Column.objects.filter(board_id=board_id).all()
+
+    columns_info = [column for column in columns]
+
+    return JsonResponse(columns_info, safe=False)
+
 #
 # data = (
 #     DBRequestBuilder("column_details", "No column found with this ID!")
@@ -415,7 +412,7 @@ HANDLER = RequestHandler(BASE_DIR / 'db.sqlite3')
 #         return JsonResponses.response(JsonResponses.ERROR, f"Error updating card: {str(e)}")
 #
 #
-@HANDLER.bind("burndown", "board/<int:board_id>/burndown/", request="GET", session=True)
+@HANDLER.bind("burndown", "burndown/<int:board_id>", request="GET", session=True)
 def burndown_view(request, board_id):
 
     uuid = get_user_from(request)
@@ -433,11 +430,17 @@ def burndown_view(request, board_id):
     total_cards = cards.count()
     total_expired_cards = expired_cards.count()
 
+    class TemplateColumn:
+        def __init__(self, _column_title, _card_count):
+            self.name = _column_title
+            self.card_count = _card_count
+
     # column cards
     columns = Column.objects.filter(board_id=board_id)
-    cards_per_column = {}
+    cards_per_column = []
     for column in columns:
-        cards_per_column[column.title] = Card.objects.filter(column_id=column.id).count()
+        template_column = TemplateColumn(column.title, Card.objects.filter(column_id=column.id).count())
+        cards_per_column.append(template_column)
 
     # story_points
     total_story_points = 0
@@ -453,78 +456,82 @@ def burndown_view(request, board_id):
     })
 
 
-@HANDLER.bind('dashboard', 'dashboard/', request='GET', session=True)
+queries = (
+    DBQuery("user", "User not found!")
+        .from_table(DBTable("user"))
+        .filter(_user_uuid="PARAM(uuid)")
+        .only("username", "image"),
+    DBQuery("boards_owned", "There was a problem loading your boards!")
+        .from_table(DBTable("board"))
+        .filter(owner="PARAM(uuid)")
+        .only("name", "description", "image"),
+    DBQuery("boards_guested", "There was a problem loading your boards!")
+        .from_table(DBTable("board").join(DBTable("guest"), f"board_id = {DBTable("board").field("id")}"))
+        .filter(user_id="PARAM(uuid)")
+        .only("name", "description", "image")
+
+)
+
+@HANDLER.bind('dashboard', 'dashboard/', *queries, request='GET', session=True)
 @requires_csrf_token
-def dashboard(request):
-
-    print("access to dashboard")
-
-    uuid = get_user_from(request)
-    print("from uuid: " + uuid)
-    user = User.objects.filter(uuid=uuid).first()
-    print("from user: " + str(user))
-
-    if user is None:
-        return response_error("User not found.")
-
-    print("user found")
-
-    boards_owned = Board.objects.filter(owner=uuid).all()
-
-    #if boards_owned is None:
-        #return response_error("You do not own any board.")
-
-    boards_guested = Guest.objects.filter(user_id=uuid).all()
-
-    #if boards_guested is None:
-        #return response_error("You are not a guest in any board.")
+def dashboard(request, user, boards_owned, boards_guested):
 
     print(boards_owned)
     print(boards_guested)
 
+    class TemplateUser:
+        def __init__(self, _user):
+            self.username = _user[0]
+            self.image = _user[1]
+
+    class TemplateBoard:
+        def __init__(self, board, guest=False):
+            self.name = board[0]
+            self.description = board[1]
+            self.image = board[2]
+            self.is_guest = guest
+
+    user = TemplateUser(user)
+
+    boards_owned = [TemplateBoard(boards_owned)] if isinstance(boards_owned, tuple) else [TemplateBoard(b) for b in boards_owned]
+    boards_guested = [TemplateBoard(boards_guested, guest=True)] if isinstance(boards_guested, tuple) else [TemplateBoard(b, guest=True) for b in boards_guested]
+
     return render(request, 'dashboard.html', {
         'user': user,
-        'boards_owned': boards_owned,
-        'boards_guest': boards_guested
+        'boards': boards_owned + boards_guested
     })
 
-#
-# @HANDLER.bind("create_board", "board/create/")
-# def create_board_view(request):
-#     """
-#     Creates a new board for the logged-in user.
-#     :param request: HttpRequest - The HTTP request object.
-#     :param uuid: str - The UUID of the authenticated user passed by the RequestHandler.
-#     :return: JsonResponse - The JSON response with the result of the operation.
-#     """
-#
-#     user = request.session.get('user_id', None)
-#
-#     if user is None:
-#         return JsonResponses.response(JsonResponses.ERROR, "You are not logged.")
-#
-#     if request.method != "POST":
-#         return JsonResponses.response(JsonResponses.ERROR, "Invalid request method.")
-#
-#     name = request.POST.get("name")
-#     description = request.POST.get("description")
-#
-#     if not name or not description:
-#         return JsonResponses.response(JsonResponses.ERROR, "Name and description are required.")
-#
-#     try:
-#         new_board = Board.objects.create(
-#             owner_id=user,
-#             name=name,
-#             description=description,
-#         )
-#         new_board.save()
-#
-#         return JsonResponses.response(JsonResponses.SUCCESS, "Board created successfully.")
-#     except Exception as e:
-#         return JsonResponses.response(JsonResponses.ERROR, f"Error: {e}")
-#
-#
+
+@HANDLER.bind("create_board", "board/create/", session=True, request="POST")
+def create_board_view(request):
+    """
+    Creates a new board for the logged-in user.
+    :param request: HttpRequest - The HTTP request object.
+    :param uuid: str - The UUID of the authenticated user passed by the RequestHandler.
+    :return: JsonResponse - The JSON response with the result of the operation.
+    """
+
+    user = get_user_from(request)
+
+    name = request.POST.get("name")
+    description = request.POST.get("description")
+
+    if not name or not description:
+        return response_error("Name and description are required.")
+
+    try:
+        new_board = Board.objects.create(
+            owner_id=user,
+            name=name,
+            description=description,
+        )
+        new_board.save()
+
+        return response_error("Board created successfully.")
+    except Exception as e:
+        return response_error(f"Error: {e}")
+
+
 # @HANDLER.bind("add_user", "board/<int:board_id>/add_user/")
 # def add_user_view(request, board_id):
 #     """
@@ -628,7 +635,7 @@ queries = (
         .filter(condition=f"(owner = PARAM(uuid) OR user_id = PARAM(uuid)) AND board_id = PARAM(board_id)"),
 )
 
-@HANDLER.bind("burndown_image", "board/<int:board_id>/burndown/image", *queries, request="POST", session=True)
+@HANDLER.bind("burndown_image", "/burndown/<int:board_id>/image", *queries, request="POST", session=True)
 @requires_csrf_token
 def burndown_image_view(request, board_id, board):
 
@@ -683,3 +690,4 @@ def burndown_image_view(request, board_id, board):
 
 
     return generate_burndown_image(total_cards, expired_cards)
+
