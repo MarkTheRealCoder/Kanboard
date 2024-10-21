@@ -8,7 +8,7 @@ from django.views.decorators.csrf import requires_csrf_token
 from Kanboard.settings import BASE_DIR
 from authentication.models import User
 from core.models import Board, Column, Card, Guest
-from static.services import RequestHandler, JsonResponses, DBQuery, DBTable
+from static.services import RequestHandler, JsonResponses
 from django.utils import timezone
 
 from static.utils.utils import get_user_from, response_error, get_board, \
@@ -16,8 +16,7 @@ from static.utils.utils import get_user_from, response_error, get_board, \
     get_expired_cards_of_board, get_cards_of_board, response_success
 
 # Create your views here.
-HANDLER = RequestHandler(BASE_DIR / 'db.sqlite3')
-
+HANDLER = RequestHandler()
 
 @HANDLER.bind("board", "board/<int:board_id>", session=True, request="GET")
 def board_view(request, board_id):
@@ -456,50 +455,29 @@ def burndown_view(request, board_id):
     })
 
 
-queries = (
-    DBQuery("user", "User not found!")
-        .from_table(DBTable("user"))
-        .filter(_user_uuid="PARAM(uuid)")
-        .only("username", "image"),
-    DBQuery("boards_owned", "There was a problem loading your boards!")
-        .from_table(DBTable("board"))
-        .filter(owner="PARAM(uuid)")
-        .only("name", "description", "image", DBTable("board").field("id")),
-    DBQuery("boards_guested", "There was a problem loading your boards!")
-        .from_table(DBTable("board").join(DBTable("guest"), f"board_id = {DBTable("board").field("id")}"))
-        .filter(user_id="PARAM(uuid)")
-        .only("name", "description", "image", DBTable("board").field("id"))
-
-)
-
-@HANDLER.bind('dashboard', 'dashboard/', *queries, request='GET', session=True)
+@HANDLER.bind('dashboard', 'dashboard/', request='GET', session=True)
 @requires_csrf_token
-def dashboard(request, user, boards_owned, boards_guested):
+def dashboard(request):
+    uuid = get_user_from(request)
 
-    print(boards_owned)
-    print(boards_guested)
+    user = User.objects.filter(uuid=uuid).first()
 
-    class TemplateUser:
-        def __init__(self, _user):
-            self.username = _user[0]
-            self.image = _user[1]
+    boards_owned = [board for board in Board.objects.filter(owner=uuid).all()]
+    boards_guested = [board for board in Board.objects.all() if Guest.objects.filter(user_id=uuid, board_id=board.id).exists()]
 
     class TemplateBoard:
-        def __init__(self, board, guest=False):
-            self.name = board[0]
-            self.description = board[1]
-            self.image = board[2]
-            self.id = board[3]
-            self.is_guest = guest
+        def __init__(self, board):
+            self.name = board.name
+            self.description = board.description
+            self.image = board.image
+            self.id = board.id
+            self.is_guest = board.owner != uuid
 
-    user = TemplateUser(user)
-
-    boards_owned = [TemplateBoard(boards_owned)] if isinstance(boards_owned, tuple) else [TemplateBoard(b) for b in boards_owned]
-    boards_guested = [TemplateBoard(boards_guested, guest=True)] if isinstance(boards_guested, tuple) else [TemplateBoard(b, guest=True) for b in boards_guested]
+    boards_owned = [TemplateBoard(board) for board in boards_owned + boards_guested]
 
     return render(request, 'dashboard.html', {
         'user': user,
-        'boards': boards_owned + boards_guested
+        'boards': boards_owned
     })
 
 
@@ -597,23 +575,20 @@ def create_board_view(request):
 #
 #
 
-queries = (
-    DBQuery("is_owner", "This board is not linked to your account.")
-        .from_table(DBTable("board"))
-        .filter(owner="PARAM(uuid)", id="PARAM(board_id)"),
-)
-
-@HANDLER.bind("remove_user", "board/<int:board_id>/remove_user/", *queries, request="POST", session=True)
+@HANDLER.bind("remove_user", "board/<int:board_id>/remove_user/", request="POST", session=True)
 @requires_csrf_token
-def remove_user_view(request, board_id, is_owner):
+def remove_user_view(request, board_id):
     """
-    Executes the query to remove a user from a board using the username, but only if the current user is authenticated and is the owner of the board.
+    Executes the query to remove a user from a board using the username, but only if the current user is authenticated
+    and is the owner of the board.
     :param request: HttpRequest - The HTTP request object.
     :param board_id: int - The ID of the board from which the user will be removed.
     :return: JsonResponse - The JSON response with the result of the operation.
     """
 
-    if not is_owner:
+    uuid = get_user_from(request)
+
+    if not Board.objects.filter(id=board_id, owner=uuid).exists():
         response_error("You don't own this board.")
 
     username_to_remove = request.POST.get("username")
@@ -628,27 +603,21 @@ def remove_user_view(request, board_id, is_owner):
     return response_success(f"{username_to_remove} has been removed successfully from this board.")
 
 
-queries = (
-    DBQuery("board", "This board is not linked to your account.")
-        .from_table(
-            DBTable("board").join(
-                DBTable("guest"),
-                f"{DBTable('board').field('id')} = board_id"
-            )
-        )
-        .filter(condition=f"(owner = PARAM(uuid) OR user_id = PARAM(uuid)) AND board_id = PARAM(board_id)"),
-)
-
-@HANDLER.bind("burndown_image", "burndown/<int:board_id>/image", *queries, request="POST", session=True)
+@HANDLER.bind("burndown_image", "burndown/<int:board_id>/image", request="GET", session=True)
 @requires_csrf_token
-def burndown_image_view(request, board_id, board):
+def burndown_image_view(request, board_id):
+
+    uuid = get_user_from(request)
+    board = get_board(Board, board_id)
 
     if not board:
-        response_error("This board is not linked to your account.")
+        response_error("Board not found.")
+
+    if check_user_not_owner_or_guest(Board, Guest, uuid, board_id):
+        response_error("You do not have access to this board.")
 
     total_cards = get_cards_of_board(Card, board_id).count()
     expired_cards = get_expired_cards_of_board(Card, board_id).count()
-
 
     def generate_burndown_image(cards, exp_cards):
         import matplotlib.pyplot as plt
@@ -692,8 +661,7 @@ def burndown_image_view(request, board_id, board):
 
         return HttpResponse(buffer, content_type='image/png')
 
-
-    return generate_burndown_image(total_cards, expired_cards)
+    return generate_burndown_image(total_cards - expired_cards, expired_cards)
 
 
 @HANDLER.bind("board_creation", "dashboard/creation/", request="GET", session=True)
@@ -718,3 +686,4 @@ def modal_board_creation(request):
         </div>
     """
     return HttpResponse(modal)
+

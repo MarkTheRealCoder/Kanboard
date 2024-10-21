@@ -2,16 +2,12 @@ from django.db import models
 
 from Kanboard.settings import BASE_DIR
 from authentication.models import User
-from static.services import register
 
 
 # Create your models here.
-
-database = BASE_DIR / 'db.sqlite3'
-app_name = "core"
+APP_NAME = "core"
 
 
-@register(database, app_name)
 class Board(models.Model):
     id = models.AutoField(primary_key=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE, db_column="owner")
@@ -24,7 +20,6 @@ class Board(models.Model):
         return self.name
 
 
-@register(database, app_name)
 class Guest(models.Model):
     id = models.AutoField(primary_key=True)
     user_id = models.ForeignKey(User, on_delete=models.CASCADE, db_column="user_id")
@@ -37,7 +32,6 @@ class Guest(models.Model):
         return f"{self.user_id} - {self.board_id}"
 
 
-@register(database, app_name)
 class Column(models.Model):
     id = models.AutoField(primary_key=True)
     board_id = models.ForeignKey(Board, on_delete=models.CASCADE, db_column="board_id")
@@ -53,7 +47,6 @@ class Column(models.Model):
         return self.title
 
 
-@register(database, app_name)
 class Card(models.Model):
     id = models.AutoField(primary_key=True)
     board_id = models.ForeignKey(Board, on_delete=models.CASCADE, db_column="board_id")
@@ -72,4 +65,23 @@ class Card(models.Model):
 
     def __str__(self):
         return self.title
+
+
+# class JoinRequest(models.Model):
+#     id = models.AutoField(primary_key=True)
+#     user_id = models.ForeignKey(User, on_delete=models.CASCADE, db_column="user_id")
+#     board_id = models.ForeignKey(Board, on_delete=models.CASCADE, db_column="board_id")
+#     status = models.BooleanField(null=True, default=None)
+#
+#     class Meta:
+#         constraints = [
+#             models.UniqueConstraint(
+#                 fields=['user_id', 'board_id'],
+#                 condition=models.Q(status__isnull=True),
+#                 name='unique_id1_id2_when_null'
+#             ),
+#         ]
+#
+#     def __str__(self):
+#         return f"{self.user_id} - {self.board_id}"
 
