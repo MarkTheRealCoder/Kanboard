@@ -37,7 +37,7 @@
                     <div class="cross">
                     </div>
                     {% if user.image %}
-                        <img src="{{ user.image }}" alt="User's propic" id="propic">
+                        <img src="{{ MEDIA_URL }}{{ user.image }}" alt="User's propic" id="propic">
                     {% else %}
                         <img src="../../static/assets/images/board_image_example.png" alt="User's propic" id="propic">
                     {% endif %}
@@ -69,33 +69,56 @@
 
                 <div>
                     <button type="submit" id="confirm" class="button submit-button">Save</button>
-                    <button type="submit" id="discard" class="button discard-button">Discard changes</button>
+                    <button type="submit" id="discard" class="button discard-button" disabled>Discard changes</button>
                 </div>
                 <script>
+                    let inputs = [];
+                    let inputsMap = {}
+
+                    document.addEventListener('DOMContentLoaded', () => {
+                        document.querySelectorAll('input').forEach((input) => {
+                            inputsMap[input.name] = input.value ?? '';
+                        })
+                    });
+                    
                     document.querySelector('#logout').addEventListener('click', () => {
                         triggerMicro("{% url 'authentication:logout' %}", [], displayMessage, displayMessage)
                     });
-
+                    
                     document.querySelector('#confirm').addEventListener('click', (event) => {
                         event.preventDefault();
-                        console.log("Prevented!");
-                        triggerMicro("{% url 'authentication:user_management' %}", ['name', 'surname', 'email', 'password', 'image'], displayMessage, displayMessage);
+                        triggerMicro("{% url 'authentication:user_management' %}", inputs, (response) => {
+                            displayMessage(response);
+                            for (let input of inputs) {
+                                let inputElement = document.querySelector(`input[name="${input}"]`);
+                                inputsMap[input] = inputElement.value;
+                                if (input.includes('password') || input === 'image') {
+                                    inputElement.value = '';
+                                }
+                            }
+                            inputs = [];
+                            $('#discard').prop('disabled', true);
+                            
+                        }, displayMessage);
                     });
 
-                    document.querySelector('input').addEventListener('change', (event) => {
-                        $('#discard').prop('disabled', false);
-                    })
+                    document.querySelectorAll('input').forEach((input) => {
+                        input.addEventListener('change', (event) => {
+                            $('#discard').prop('disabled', false);
+                            if (inputsMap[event.target.name] !== event.target.value) inputs.push(event.target.name);
+                            else inputs.pop(event.target.name);
+                            if (inputs.length === 0) $('#discard').prop('disabled', true);
+                        })
+                    });
 
                     const edit_image = $('#edit-image');
                     edit_image.on('click', (e) => {$('#image').click()})
 
                     $('#image').change((e) => {
-                        console.log("Ciao");
                         const file = e.target.files[0];
                         const reader = new FileReader();
 
                         reader.onload = (e) => {
-                            console.log("Riciao")
                             $('#propic').attr('src', e.target.result);
                         }
 
@@ -104,6 +127,10 @@
 
                     $('#profile-image > img').hover(() => {edit_image.show()}, () => {})
                     edit_image.hover(() => {}, () => {edit_image.hide()})
+                    
+                    $('#discard').click(() => {
+                        window.location.href = "{% url 'authentication:profile' %}";
+                    })
 
                 </script>
             </div>

@@ -1,6 +1,5 @@
 function triggerMicro(path, names = [], onSuccess = function(x){}, onFailure = function(x){})
 {
-    console.log("Sending MicroRequestEvent to: " + path);
 
     const event = new CustomEvent('MicroRequestEvent', {
         detail: {
@@ -20,7 +19,6 @@ document.addEventListener('DOMContentLoaded', function(){
     forms.forEach(function(form) {
         form.addEventListener('submit', function(event) {
             event.preventDefault(); // Prevent the form from submitting
-            console.log('Form submission prevented!');
         });
     });
 
@@ -56,8 +54,9 @@ function getParams(names)
         let key = "value";
 
         if (!inputElement) {
-            key = "textContent";
             inputElement = document.querySelector(`#${name}`);
+            if (inputElement.tagName === 'TEXTAREA') key = 'value';
+            else key = "textContent";
         }
 
         if (inputElement) {
@@ -73,8 +72,6 @@ function getParams(names)
 
 function sendRequest(event)
 {
-    console.log('Sending request to server...');
-
     const serverPath = event.detail.path;
     const params = event.detail.params;
     const onSuccess = event.detail.onSuccess;

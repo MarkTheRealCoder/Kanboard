@@ -1,7 +1,7 @@
 from io import BytesIO
 
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.template.context_processors import request
 from django.views.decorators.csrf import requires_csrf_token
 
@@ -464,11 +464,11 @@ queries = (
     DBQuery("boards_owned", "There was a problem loading your boards!")
         .from_table(DBTable("board"))
         .filter(owner="PARAM(uuid)")
-        .only("name", "description", "image"),
+        .only("name", "description", "image", DBTable("board").field("id")),
     DBQuery("boards_guested", "There was a problem loading your boards!")
         .from_table(DBTable("board").join(DBTable("guest"), f"board_id = {DBTable("board").field("id")}"))
         .filter(user_id="PARAM(uuid)")
-        .only("name", "description", "image")
+        .only("name", "description", "image", DBTable("board").field("id"))
 
 )
 
@@ -489,6 +489,7 @@ def dashboard(request, user, boards_owned, boards_guested):
             self.name = board[0]
             self.description = board[1]
             self.image = board[2]
+            self.id = board[3]
             self.is_guest = guest
 
     user = TemplateUser(user)
@@ -502,7 +503,7 @@ def dashboard(request, user, boards_owned, boards_guested):
     })
 
 
-@HANDLER.bind("create_board", "board/create/", session=True, request="POST")
+@HANDLER.bind("create_board", "dashboard/new_board/", session=True, request="POST")
 def create_board_view(request):
     """
     Creates a new board for the logged-in user.
@@ -513,8 +514,10 @@ def create_board_view(request):
 
     user = get_user_from(request)
 
-    name = request.POST.get("name")
-    description = request.POST.get("description")
+    print(request.POST)
+
+    name = request.POST.get("board_title")
+    description = request.POST.get("board_description")
 
     if not name or not description:
         return response_error("Name and description are required.")
@@ -524,12 +527,13 @@ def create_board_view(request):
             owner_id=user,
             name=name,
             description=description,
+            creation_date=timezone.now()
         )
         new_board.save()
-
-        return response_error("Board created successfully.")
     except Exception as e:
-        return response_error(f"Error: {e}")
+        return response_error(f"Couldn't create the board: {e}")
+
+    return redirect('core:board', board_id=new_board.id)
 
 
 # @HANDLER.bind("add_user", "board/<int:board_id>/add_user/")
@@ -635,7 +639,7 @@ queries = (
         .filter(condition=f"(owner = PARAM(uuid) OR user_id = PARAM(uuid)) AND board_id = PARAM(board_id)"),
 )
 
-@HANDLER.bind("burndown_image", "/burndown/<int:board_id>/image", *queries, request="POST", session=True)
+@HANDLER.bind("burndown_image", "burndown/<int:board_id>/image", *queries, request="POST", session=True)
 @requires_csrf_token
 def burndown_image_view(request, board_id, board):
 
@@ -691,3 +695,26 @@ def burndown_image_view(request, board_id, board):
 
     return generate_burndown_image(total_cards, expired_cards)
 
+
+@HANDLER.bind("board_creation", "dashboard/creation/", request="GET", session=True)
+def modal_board_creation(request):
+    modal = """
+        <div class="form-box" style="width: 100%; height: 100%; border-radius: 8px;">
+            <h1 class="form-title">Create a new board</h1>
+            <div class="input-container">
+                <img src="../../static/assets/icons/tag.svg" alt="Repeat Password Icon" class="input-icon">
+                <input type="text" class="input-field" id="board_title" name="board_title" placeholder="Board title" required>
+            </div>
+            <div class="input-container">
+                <img src="../../static/assets/icons/description.svg" alt="Repeat Password Icon" class="input-icon">
+                <textarea class="input-field" id="board_description" name="board_description" maxlength="256" rows="4" placeholder="Board description" required></textarea>
+            </div>
+            <button type="submit" class="button submit-button" id="create">Create</button>
+            <script>
+                document.querySelector("#create").addEventListener("click", () => {
+                    triggerMicro('new_board/', ['board_title', 'board_description'], displayMessage, displayMessage); 
+                });
+            </script>
+        </div>
+    """
+    return HttpResponse(modal)

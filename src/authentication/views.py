@@ -93,40 +93,40 @@ def user_management(request):
 
     print(request.POST)
     print(request.FILES)
-    return response_success("Ancora non funziona bro!")
 
-    # for key in updates.keys():
-    #     if not key in request.POST.keys():
-    #         updates.pop(key)
-    #         continue
-    #     updates[key] = request.POST.get(key)
-    #
-    # if img := request.FILES.get('image', None):
-    #     updates['image'] = request.FILES.get('image')
-    #
-    # try:
-    #     user = User.objects.filter(uuid=uuid).first()
-    #
-    #     UserValidations(User, **updates).result()
-    #
-    #     if img := updates.get('image', None):
-    #         random_name = f"{uuid}{img.name[img.name.rfind('.'):]}"
-    #         img.name = random_name
-    #         user.image = img
-    #     if name := updates.get('name', None):
-    #         user.name = name
-    #     if surname := updates.get('surname', None):
-    #         user.surname = surname
-    #     if email := updates.get('email', None):
-    #         user.email = email
-    #     if password := updates.get('password', None):
-    #         user.password = password
-    #
-    #     user.save()
-    # except ModelsAttributeError:
-    #     return response_error('Could not update your account details.')
-    #
-    # return response_success('Your account details has been updated successfully.')
+    for key in updates.keys():
+        if not key in request.POST.keys():
+            continue
+        updates[key] = request.POST.get(key)
+
+    updates = {k: v for k, v in updates.items() if v is not None}
+
+    if img := request.FILES.get('image', None):
+        updates['image'] = request.FILES.get('image')
+
+    user = User.objects.filter(uuid=uuid).first()
+
+    try:
+        UserValidations(User, **updates).result()
+    except ModelsAttributeError as e:
+        return response_error(f'Could not update your account details: {e}')
+
+    if img := updates.get('image', None):
+        random_name = f"{uuid}{img.name[img.name.rfind('.'):]}"
+        img.name = random_name
+        user.image = img
+    if name := updates.get('name', None):
+        user.name = name
+    if surname := updates.get('surname', None):
+        user.surname = surname
+    if email := updates.get('email', None):
+        user.email = email
+    if password := updates.get('password', None):
+        user.password = password
+
+    user.save()
+
+    return response_success('Your account details has been updated successfully.')
 
 
 @HANDLER.bind('logout', 'logout/', request='POST', session=True)
@@ -159,7 +159,7 @@ def profile(request, user):
             self.email = _user[2]
             self.username = _user[3]
             self.image = _user[4]
-            self.days_membership = (datetime.now() - datetime.strptime(_user[5], "%Y-%m-%d %H:%M:%S.%f")).days
+            self.days_membership = (datetime.now() - datetime.strptime(_user[5].split('.')[0], "%Y-%m-%d %H:%M:%S")).days
 
     user = UserInterface(user)
 

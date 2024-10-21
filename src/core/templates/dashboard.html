@@ -49,6 +49,7 @@
                     {% endif %}
                     <h2>{{ board.name }}</h2>
                     <p>{{ board.description }}</p>
+                    <a href="{% url 'core:board' board_id=board.id %}" style="display: none;"></a>
                 </div>
         {% endfor %}
 
@@ -67,18 +68,18 @@
 
         document.querySelector('#add-board')
                 .addEventListener('click', () => {
-                    console.log("adding board")
-                    triggerMicro("{% url 'core:create_board' %}", [], displayMessage, displayMessage)
+                    openModal("{% url 'core:board_creation' %}")
                 })
+        document.querySelector('.board-silhouette:has(.cross)')
+            .addEventListener('click', () => {
+                openModal("{% url 'core:board_creation' %}")
+            })
 
-        document.querySelectorAll('.board-silhouette').forEach((board, index) =>
-        {
-            if (index === document.querySelectorAll('.board-silhouette').length - 1) {
-                board.addEventListener('click', () => { })
-            } else {
-                board.addEventListener('click', () => { })
-            }
-        })
+        document.querySelectorAll('.board-silhouette').forEach((board) => {
+            board.addEventListener('click', () => {
+                board.querySelector('a').click()
+            })
+        });
     </script>
 </body>
 </html>

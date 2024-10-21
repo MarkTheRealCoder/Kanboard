@@ -30,6 +30,33 @@
         <button id="logout" class="button logout">Logout</button>
     </nav>
     <div class="dashboard violet-background">
+        <div class="profile form-box infos-container">
+            <div id="profile-image">
+                <div id="edit-image">
+                    <img src="{% static 'assets/icons/edit.svg' %}" alt="Board" class="filter-white">
+                </div>
+                <div class="cross">
+                </div>
+                {% if board.image %}
+                    <img src="{{ MEDIA_URL }}{{ board.image }}" alt="User's propic" id="propic">
+                {% else %}
+                    <img src="../../static/assets/images/board_image_example.png" alt="User's propic" id="propic">
+                {% endif %}
+                <input class="changeable" id="image" type="file" name="image" accept="image/*" style="display: none;">
+            </div>
+            <div class="input-container">
+                <img src="../../static/assets/icons/tag.svg" alt="Board title icon" class="input-icon">
+                <input type="text" id="board_title" name="board_title" class="input-field changeable" value="{{ board.name }}">
+            </div>
+            <div class="input-container">
+                <img src="../../static/assets/icons/description.svg" alt="Board description icon" class="input-icon">
+                <textarea id="board_description" name="board_description" class="input-field changeable" maxlength="256" rows="4">{{ board.description }}</textarea>
+            </div>
+            <div>
+                <button type="submit" id="confirm" class="button submit-button">Save</button>
+                <button type="submit" id="discard" class="button discard-button" disabled>Discard changes</button>
+            </div>
+        </div>
         <div class="board-silhouette column-silhouette">
             <div class="sticky-title">
                 <h2>Column 1</h2>
@@ -37,12 +64,18 @@
             </div>
             <hr>
             <div class="overflow-container">
-                <div class="card-silhouette">
+                <div class="card-silhouette" draggable="true">
                     <div class="non-sticky-title">
                         <h4>Card 1</h4>
-                        <div class="filter-red expired">
-                            <img src="../../static/assets/icons/alert.svg" alt="Alert icon">
-                        </div>
+                        {% if card.is_expired %}
+                            <div class="filter-red expired" title="Skoddi sesso">
+                                <img src="../../static/assets/icons/alert.svg" alt="Alert icon">
+                            </div>
+                        {% else %}
+                            <div class="filter-green expired" title="Skoddi sesso">
+                                <img src="../../static/assets/icons/info.svg" alt="Alert icon">
+                            </div>
+                        {% endif %}
                     </div>
                     <hr>
                 </div>
@@ -108,6 +141,62 @@
                 .addEventListener('click', () => {
                     window.location.href = "{% url 'core:burndown' board_id=board.id %}"
                 })
+        let inputs = [];
+        let inputsMap = {}
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.changeable').forEach((input) => {
+                inputsMap[input.name] = input.value ?? '';
+            })
+        });
+
+        document.querySelector('#confirm').addEventListener('click', (event) => {
+            event.preventDefault();
+            triggerMicro("update/", inputs, (response) => {
+                displayMessage(response);
+                for (let input of inputs) {
+                    let inputElement = document.querySelector(`.changeable[name="${input}"]`);
+                    inputsMap[input] = inputElement.value;
+                    if (input === 'image') {
+                        inputElement.value = '';
+                    }
+                }
+                inputs = [];
+                $('#discard').prop('disabled', true);
+
+            }, displayMessage);
+        });
+
+        document.querySelectorAll('input, textarea').forEach((input) => {
+            input.addEventListener('change', (event) => {
+                $('#discard').prop('disabled', false);
+                if (inputsMap[event.target.name] !== event.target.value) inputs.push(event.target.name);
+                else inputs.pop(event.target.name);
+                if (inputs.length === 0) $('#discard').prop('disabled', true);
+            })
+        });
+
+        const edit_image = $('#edit-image');
+        edit_image.on('click', (e) => {$('#image').click()})
+
+        $('#image').change((e) => {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+
+            reader.onload = (e) => {
+                $('#propic').attr('src', e.target.result);
+            }
+
+            reader.readAsDataURL(file);
+        })
+
+        $('#profile-image > img').hover(() => {edit_image.show()}, () => {})
+        edit_image.hover(() => {}, () => {edit_image.hide()})
+
+        $('#discard').click(() => {
+            window.location.href = "{% url 'authentication:profile' %}";
+        })
+
     </script>
 </body>
 </html>

@@ -13,12 +13,12 @@ function validateEmail(email) {
 }
 
 function validatePassword(password) {
-    const re = /^[a-zA-Z0-9_%$&,@!?]{8,}$/;
-    return validationResult(re.test(password), "Password must contain at least 8 characters");
+    const re = /^[a-zA-Z0-9_%$&@!?]{8,}$/;
+    return validationResult(re.test(password), "Password must be at least 8 characters long and can only contain letters, numbers, and the following special characters: _, %, $, &, @, !, ?");
 }
 
 function validatePasswordMatch(password) {
-    return validationResult(password === document.querySelector('input[name="password"]').value, "Passwords do not match");
+    return validationResult(password === document.querySelector('input[name="repeat-password"]').value, "Passwords do not match");
 }
 
 function validateName(name) {
@@ -33,7 +33,6 @@ function validateSurname(surname) {
 
 function validateImage(image) {
     const re = /^image\/(jpeg|png|jpg)$/;
-    console.log(re.test(image.type))
     return validationResult(re.test(image.type), "Invalid image format");
 }
 

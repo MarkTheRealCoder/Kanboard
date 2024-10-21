@@ -90,6 +90,10 @@ h1.app-title {
     filter: invert(56%) sepia(0%) saturate(1175%) hue-rotate(136deg) brightness(89%) contrast(96%);
 }
 
+.input-icon:has(+ textarea.input-field) {
+    transform: translateY(-200%);
+}
+
 .form-box .name-surname-row .input-field#name {
     margin-right: 5px;
 }
@@ -106,6 +110,10 @@ h1.app-title {
     color: var(--white);
     border-radius: 5px;
     font-size: 18px;
+}
+
+textarea.input-field {
+    resize: none;
 }
 
 .submit-button {
@@ -354,7 +362,6 @@ nav button.blue:hover {
     display: flex;
     justify-content: center;
     align-items: center;
-    flex-direction: column;
     height: 90%;
     width: 350px;
     border: 1px solid grey;
@@ -362,6 +369,10 @@ nav button.blue:hover {
     background-color: inherit;
     color: #fff;
     margin-left: 3em;
+}
+
+.board-silhouette:not(.column-silhouette) {
+    flex-direction: column;
     padding: 10px 0;
 }
 
@@ -373,7 +384,7 @@ nav button.blue:hover {
     cursor: pointer;
 }
 
-.board-silhouette:not(:has(.cross)):hover {
+.board-silhouette:not(:has(.cross)):not(.column-silhouette):hover {
     transition: transform 0.35s ease-in-out;
     background-color: rgba(255, 255, 255, .05);
     transform: scale(1.06);
@@ -390,13 +401,13 @@ nav button.blue:hover {
     margin-bottom: 1em;
 }
 
-.board-silhouette h2 {
+.board-silhouette > h2 {
     text-align: center;
     text-decoration: underline;
-     margin-bottom: 1em;
+    margin-bottom: 1em;
 }
 
-.board-silhouette p {
+.board-silhouette > p {
     text-align: justify;
     width: 80%;
     height: fit-content;
@@ -465,6 +476,7 @@ nav button.blue:hover {
     background-color: #1e1e1e;
     display: flex;
     justify-content: space-between;
+    align-items: center;
     padding-right: .5em;
 }
 
@@ -482,6 +494,12 @@ nav button.blue:hover {
     border-top-left-radius: 15px;
     border-top-right-radius: 15px;
     height: 38px;
+}
+
+.infos-container {
+    height: 100%;
+    width: 300px;
+    background-color: var(--dark-gray);
 }
 
 .expired {
@@ -574,6 +592,7 @@ tr {
     color: whitesmoke;
     visibility: hidden;
     text-align: center;
+    overflow-wrap: break-word;
 }
 
 a.no-style-text {

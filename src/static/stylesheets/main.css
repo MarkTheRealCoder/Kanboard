@@ -35,6 +35,10 @@ html {
     filter: invert(61%) sepia(77%) saturate(6129%) hue-rotate(334deg) brightness(124%) contrast(112%);
 }
 
+.filter-green {
+    filter: invert(81%) sepia(64%) saturate(431%) hue-rotate(45deg) brightness(96%) contrast(90%);
+}
+
 /* Scrollbar chromium */
 
 ::-webkit-scrollbar {
