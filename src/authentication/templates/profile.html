@@ -19,14 +19,16 @@
     <p id="service-message"></p>
     <nav>
         <div class="logo">
-            <h1>Kanboard</h1>
+            <h1>
+                <a href="{% url 'core:dashboard' %}">Kanboard</a>
+            </h1>
         </div>
         <button class="ghost-button"></button>
         <button id="logout" class="button logout">
             Logout
         </button>
     </nav>
-    <div class="dashboard violet-background justify-center">
+    <div class="dashboard justify-center">
         <section class="first-section">
             <div class="profile form-box">
                 <h2>{{ user.username }}'s Profile</h2>
@@ -39,7 +41,7 @@
                     {% if user.image %}
                         <img src="{{ MEDIA_URL }}{{ user.image }}" alt="User's propic" id="propic">
                     {% else %}
-                        <img src="../../static/assets/images/board_image_example.png" alt="User's propic" id="propic">
+                        <img src="{% static 'assets/images/penguin.png' %}" alt="User's propic" id="propic">
                     {% endif %}
                     <input id="image" type="file" name="image" accept="image/*" style="display: none;">
                 </div>

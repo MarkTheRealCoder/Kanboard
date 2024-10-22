@@ -1,8 +1,8 @@
+from getpass import getuser
 from io import BytesIO
 
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
-from django.template.context_processors import request
 from django.views.decorators.csrf import requires_csrf_token
 
 from Kanboard.settings import BASE_DIR
@@ -13,7 +13,8 @@ from django.utils import timezone
 
 from static.utils.utils import get_user_from, response_error, get_board, \
     check_user_not_owner_or_guest, check_user_invalid, check_board_invalid, \
-    get_expired_cards_of_board, get_cards_of_board, response_success
+    get_expired_cards_of_board, get_cards_of_board, response_success, get_user, get_owner_of_board, is_owner_of_board, \
+    get_user_by_username
 
 # Create your views here.
 HANDLER = RequestHandler(BASE_DIR / 'db.sqlite3')
@@ -605,7 +606,7 @@ queries = (
 
 @HANDLER.bind("remove_user", "board/<int:board_id>/remove_user/", *queries, request="POST", session=True)
 @requires_csrf_token
-def remove_user_view(request, board_id, is_owner):
+def remove_user_view(request, board_id):
     """
     Executes the query to remove a user from a board using the username, but only if the current user is authenticated and is the owner of the board.
     :param request: HttpRequest - The HTTP request object.
@@ -613,13 +614,15 @@ def remove_user_view(request, board_id, is_owner):
     :return: JsonResponse - The JSON response with the result of the operation.
     """
 
-    if not is_owner:
+    uuid = get_user_from(request)
+
+    if is_owner_of_board(Board, uuid, board_id):
         response_error("You don't own this board.")
 
     username_to_remove = request.POST.get("username")
 
     try:
-        uuid = str(User.objects.filter(username=username_to_remove).first().uuid)
+        uuid = str(get_user_by_username(User, username_to_remove).uuid)
         if guest := Guest.objects.filter(user_id=uuid, board_id=board_id).first():
             guest.delete()
     except Exception as e:
@@ -628,27 +631,21 @@ def remove_user_view(request, board_id, is_owner):
     return response_success(f"{username_to_remove} has been removed successfully from this board.")
 
 
-queries = (
-    DBQuery("board", "This board is not linked to your account.")
-        .from_table(
-            DBTable("board").join(
-                DBTable("guest"),
-                f"{DBTable('board').field('id')} = board_id"
-            )
-        )
-        .filter(condition=f"(owner = PARAM(uuid) OR user_id = PARAM(uuid)) AND board_id = PARAM(board_id)"),
-)
-
-@HANDLER.bind("burndown_image", "burndown/<int:board_id>/image", *queries, request="POST", session=True)
+@HANDLER.bind("burndown_image", "burndown/<int:board_id>/image", request="GET", session=True)
 @requires_csrf_token
-def burndown_image_view(request, board_id, board):
+def burndown_image_view(request, board_id):
+
+    uuid = get_user_from(request)
+    board = get_board(Board, board_id)
 
     if not board:
-        response_error("This board is not linked to your account.")
+        response_error("Board not found.")
+
+    if check_user_not_owner_or_guest(Board, Guest, uuid, board_id):
+        response_error("You do not have access to this board.")
 
     total_cards = get_cards_of_board(Card, board_id).count()
     expired_cards = get_expired_cards_of_board(Card, board_id).count()
-
 
     def generate_burndown_image(cards, exp_cards):
         import matplotlib.pyplot as plt
@@ -692,8 +689,7 @@ def burndown_image_view(request, board_id, board):
 
         return HttpResponse(buffer, content_type='image/png')
 
-
-    return generate_burndown_image(total_cards, expired_cards)
+    return generate_burndown_image(total_cards - expired_cards, expired_cards)
 
 
 @HANDLER.bind("board_creation", "dashboard/creation/", request="GET", session=True)

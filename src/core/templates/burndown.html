@@ -18,7 +18,9 @@
 <body id="dashboard">
     <nav>
         <div class="logo">
-            <h1>Kanboard</h1>
+            <h1>
+                <a href="{% url 'core:dashboard' %}">Kanboard</a>
+            </h1>
         </div>
         <button class="ghost-button"></button>
         <button id="logout" class="button logout">Logout</button>
@@ -43,19 +45,21 @@
                     <td>{{ total_story_points }}</td>
                 </tr>
             </table>
-            <table>
-                <tr>
-                    <th>Column name:</th>
-                    <th>Number of Cards:</th>
-                </tr>
-                {% for column in cards_per_column %}
-                <tr>
-                    <td>{{ column.name }}</td>
-                    <td>{{ column.card_count }}</td>
-                </tr>
-                {% endfor %}
-            </table>
-            <img src="../../static/assets/images/burndown_example.png" alt="Graph">
+            {% if total_cards %}
+                <table>
+                    <tr>
+                        <th>Column name:</th>
+                        <th>Number of Cards:</th>
+                    </tr>
+                    {% for column in cards_per_column %}
+                    <tr>
+                        <td>{{ column.name }}</td>
+                        <td>{{ column.card_count }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                <img src="{% url 'core:burndown_image' board_id=board.id %}" alt="">
+            {% endif %}
         </section>
     </div>
 </body>

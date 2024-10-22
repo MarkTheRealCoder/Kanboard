@@ -20,7 +20,9 @@
     <div id="modal-wrapper"><div id="modal"></div></div>
     <nav>
         <div class="logo">
-            <h1>Kanboard</h1>
+            <h1>
+                <a href="{% url 'core:dashboard' %}">Kanboard</a>
+            </h1>
         </div>
         <button id="add-column" class="button action">Add column</button>
         <button id="add-card" class="button action">Add card</button>
@@ -29,7 +31,7 @@
         <button class="ghost-button"></button>
         <button id="logout" class="button logout">Logout</button>
     </nav>
-    <div class="dashboard violet-background">
+    <div class="dashboard">
         <div class="profile form-box infos-container">
             <div id="profile-image">
                 <div id="edit-image">
@@ -40,7 +42,7 @@
                 {% if board.image %}
                     <img src="{{ MEDIA_URL }}{{ board.image }}" alt="User's propic" id="propic">
                 {% else %}
-                    <img src="../../static/assets/images/board_image_example.png" alt="User's propic" id="propic">
+                    <img src="{% static 'assets/images/penguin.png' %}" alt="User's propic" id="propic">
                 {% endif %}
                 <input class="changeable" id="image" type="file" name="image" accept="image/*" style="display: none;">
             </div>

@@ -1,7 +1,5 @@
 from datetime import timezone, datetime
-from uuid import UUID
 
-from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.views.decorators.csrf import requires_csrf_token

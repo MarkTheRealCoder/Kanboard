@@ -62,19 +62,6 @@ body {
     margin-top: 2em;
 }
 
-.form-footer a {
-    color: #5ed399;
-}
-
-.form-footer a:hover {
-    color: #1ab565;
-}
-
-h1.app-title {
-    font-family: 'Bigshot One', cursive;
-    color: #ff6f61;
-}
-
 .input-container {
     position: relative;
     margin-bottom: 20px;
@@ -91,7 +78,11 @@ h1.app-title {
 }
 
 .input-icon:has(+ textarea.input-field) {
-    transform: translateY(-200%);
+    transform: translateY(-180%);
+}
+
+textarea.input-field {
+    resize: none;
 }
 
 .form-box .name-surname-row .input-field#name {
@@ -112,15 +103,11 @@ h1.app-title {
     font-size: 18px;
 }
 
-textarea.input-field {
-    resize: none;
-}
-
 .submit-button {
     width: 100%;
     margin-top: 2em;
     padding: 15px;
-    background-color: #388f64;
+    background-color: var(--button-green);
     color: var(--white);
     border: none;
     border-radius: 5px;
@@ -129,7 +116,7 @@ textarea.input-field {
 }
 
 .submit-button:hover {
-    background-color: #167e50;
+    background-color: var(--button-green-hover);
 }
 
 .context {
@@ -175,6 +162,15 @@ header > .title > img {
     display: flex;
     justify-content: center;
     align-items: center;
+    flex-wrap: wrap;
+}
+
+/* Breakpoint for mobile */
+
+@media screen and (max-width: 768px) {
+    .index .second-section img {
+        width: 100%;
+    }
 }
 
 .index .first-section :first-child {
@@ -192,11 +188,16 @@ header > .title > img {
     margin-top: 0;
 }
 
+.index .second-section img {
+    width: 100%;
+    margin-left: auto;
+}
+
 .index .mega-section {
     display: grid;
     justify-content: center;
     align-items: center;
-    margin-top: 15em;
+    margin-top: 10em;
     padding: 5em 0;
 }
 
@@ -204,8 +205,11 @@ header > .title > img {
     display: grid;
     border-radius: 1em;
     padding: 5em;
-    margin: 3em;
     min-width: 50%;
+}
+
+.index .first-section .description-box {
+    margin: 3em;
 }
 
 .index .mega-section .description-box:nth-child(1) {
@@ -259,10 +263,6 @@ header > .title > img {
 
 .index .description-box .button:hover {
     background-position: left center;
-}
-
-.violet-background {
-    background: var(--deep-blue);
 }
 
 #surname-icon {
@@ -363,7 +363,7 @@ nav button.blue:hover {
     justify-content: center;
     align-items: center;
     height: 90%;
-    width: 350px;
+    min-width: 350px;
     border: 1px solid grey;
     border-radius: 25px;
     background-color: inherit;
@@ -397,8 +397,9 @@ nav button.blue:hover {
 .board-silhouette .board-image {
     width: 150px;
     height: 150px;
-    border-radius: 50%;
-    margin-bottom: 1em;
+    border-radius: 1em;
+    margin-bottom: 2em;
+    margin-top: 4em;
 }
 
 .board-silhouette > h2 {
@@ -418,6 +419,7 @@ nav button.blue:hover {
     color: #a8a8a8;
     background-color: #1e1e1e;
     overflow: auto;
+    white-space: pre-wrap;
 }
 
 .board-silhouette .cross {
@@ -427,6 +429,10 @@ nav button.blue:hover {
 .board-silhouette.column-silhouette {
     background-color: var(--dark-gray);
     cursor: inherit;
+}
+
+.stabilize {
+    flex-grow: 1;
 }
 
 .column-silhouette {
@@ -447,22 +453,9 @@ nav button.blue:hover {
     width: 90%;
     border: 1px solid grey;
     border-radius: 15px;
-    /*padding: .5em;*/
     margin: 1.5em auto;
     background-color: #2b2b2b;
 }
-
-/*
-.card-silhouette:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    cursor: pointer;
-} */
-
-/*
-.column-silhouette:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    cursor: pointer;
-}*/
 
 .column-silhouette h2,
 .card-silhouette h4 {
@@ -529,10 +522,6 @@ nav button.blue:hover {
     display: block;
 }
 
-.dashboard > .burndown {
-
-}
-
 .burndown img {
     width: 600px;
     height: 600px;
@@ -578,7 +567,6 @@ tr {
     justify-content: center;
 }
 
-
 #service-message {
     width: calc(100% / 3);
     height: fit-content;
@@ -599,7 +587,6 @@ a.no-style-text {
     text-decoration: none;
     color: inherit;
 }
-
 
 div#modal {
     display: flex;
@@ -658,6 +645,7 @@ div#modal-wrapper {
 
 #discard:disabled {
     background-color: var(--square-red);
+    cursor: not-allowed;
 }
 
 .form-box img#propic {

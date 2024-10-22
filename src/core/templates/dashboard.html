@@ -20,7 +20,9 @@
     <div id="modal-wrapper"><div id="modal"></div></div>
     <nav>
         <div class="logo">
-            <h1>Kanboard</h1>
+            <h1>
+                <a href="{% url 'core:dashboard' %}">Kanboard</a>
+            </h1>
         </div>
         <button id="add-board" class="button action">Add board</button>
         <button class="ghost-button"></button>
@@ -36,7 +38,7 @@
             Logout
         </button>
     </nav>
-    <div class="dashboard violet-background">
+    <div class="dashboard">
 
         {% for board in boards %}
            {% if board.is_guested %}
@@ -46,10 +48,13 @@
            {% endif %}
                     {% if board.image %}
                         <img class="board-image" src="{{ MEDIA_URL }}{{ board.image }}" alt="Board image">
+                    {% else %}
+                        <img class="board-image" src="{% static 'assets/images/penguin.png' %}" alt="Board image">
                     {% endif %}
                     <h2>{{ board.name }}</h2>
                     <p>{{ board.description }}</p>
                     <a href="{% url 'core:board' board_id=board.id %}" style="display: none;"></a>
+                    <div class="stabilize"></div>
                 </div>
         {% endfor %}
 

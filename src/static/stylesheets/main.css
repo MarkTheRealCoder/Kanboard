@@ -11,11 +11,30 @@ html {
     --square-green: rgba(169, 250, 146, 0.2);
     --square-cyan: rgba(96, 234, 218, 0.2);
 
-    --button-green: #266a47;
-    --button-green-hover: #12492d;
+    --button-green: #388f64;
+    --button-green-hover: #167e50;
 
     --deep-blue: #0f0f18;
 }
+
+a {
+    color: #5ed399;
+}
+
+a:hover {
+    color: #1ab565;
+}
+
+.logo a {
+    color: var(--white);
+    text-decoration: none;
+}
+
+.logo a:hover {
+    text-decoration: underline;
+}
+
+/* Fonts */
 
 @font-face {
     font-family: 'Bigshot One';
@@ -26,6 +45,9 @@ html {
     font-family: 'Inter';
     src: url('../assets/fonts/Inter.ttf') format('truetype');
 }
+
+
+/* Filters */
 
 .filter-white {
     filter: invert(100%) sepia(100%) saturate(0%) hue-rotate(333deg) brightness(106%) contrast(101%);
@@ -38,6 +60,7 @@ html {
 .filter-green {
     filter: invert(81%) sepia(64%) saturate(431%) hue-rotate(45deg) brightness(96%) contrast(90%);
 }
+
 
 /* Scrollbar chromium */
 
@@ -53,7 +76,9 @@ html {
     background-color: var(--dark-gray);
 }
 
+
 /* Scrollbar firefox */
+
 * {
     scrollbar-width: thin; /* This makes the scrollbar thinner */
     scrollbar-color: #7e7e7e rgba(0, 0, 0, .4); /* thumb color | track color */
