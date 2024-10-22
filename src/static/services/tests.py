@@ -90,11 +90,11 @@ class DBRequestBuilderTest(unittest.TestCase):
         self.assertEqual("WHERE name='Stefano'\n", self.builder.query())
 
     def test_and(self):
-        self.builder._and_("age=25")
+        self.builder.o_and("age=25")
         self.assertEqual("AND age=25\n", self.builder.query())
 
     def test_or(self):
-        self.builder._or_("age=25")
+        self.builder.o_or("age=25")
         self.assertEqual("OR age=25\n", self.builder.query())
 
     def test_order_by(self):

@@ -1,24 +1,30 @@
-from django.shortcuts import render
-from django.views.decorators.csrf import requires_csrf_token
+from django.shortcuts import render, redirect
+from django.urls import reverse
 
-from Kanboard.settings import BASE_DIR
-from static.services import RequestHandler, JsonResponses
+from static.services import RequestHandler
+from static.utils.utils import get_user_from
 
 # Create your views here.
-HANDLER = RequestHandler(BASE_DIR / 'db.sqlite3')
+HANDLER = RequestHandler()
 
 
-@HANDLER.bind('index', '')
+@HANDLER.bind('index', '', request="GET")
 def index(request): # Display view
+
+    uuid = get_user_from(request)
+
+    if uuid:
+        return redirect(reverse('core:dashboard'))
+
     return render(request, 'index.html')
 
 
-@HANDLER.bind('login', 'login/')
+@HANDLER.bind('login', 'login/', request="GET")
 def login(request): # Display view
     return render(request, 'login.html')
 
 
-@HANDLER.bind('register', 'register/')
+@HANDLER.bind('register', 'register/', request="GET")
 def register(request): # Display view
     return render(request, 'register.html')
 

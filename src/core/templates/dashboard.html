@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>Kanboard - Dashboard</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'stylesheets/main.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'stylesheets/style.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'stylesheets/animations.css' %}">
+    <script type="application/javascript" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script type="application/javascript" src="{% static 'scripts/validators.js' %}"></script>
+    <script type="application/javascript" src="{% static 'scripts/micro.js' %}"></script>
+    <script type="application/javascript" src="{% static 'scripts/modals.js' %}"></script>
+    <script type="application/javascript" src="{% static 'scripts/messages.js' %}"></script>
+</head>
+<body id="dashboard">
+    <p id="service-message"></p>
+    <div id="modal-wrapper"><div id="modal"></div></div>
+    <nav>
+        <div class="logo">
+            <h1>
+                <a href="{% url 'core:dashboard' %}">Kanboard</a>
+            </h1>
+        </div>
+        <button id="add-board" class="button action">Add board</button>
+        <button class="ghost-button"></button>
+        <button class="button action" id="profile-button">
+            {% if user.image %}
+                <img src="{{ MEDIA_URL }}{{ user.image }}" alt="Pic">
+            {% else %}
+                <img src="../../static/assets/icons/user.svg" class="filter-white" alt="Pic" id="propic">
+            {% endif %}
+            <strong>{{ user.username }}</strong>
+        </button>
+        <button id="logout" class="button logout">
+            Logout
+        </button>
+    </nav>
+    <div class="dashboard">
+
+        {% for board in boards %}
+           {% if board.is_guested %}
+                <div class="board-silhouette board-guested">
+           {% else %}
+                <div class="board-silhouette">
+           {% endif %}
+                    {% if board.image %}
+                        <img class="board-image" src="{{ MEDIA_URL }}{{ board.image }}" alt="Board image">
+                    {% else %}
+                        <img class="board-image" src="{% static 'assets/images/penguin.png' %}" alt="Board image">
+                    {% endif %}
+                    <h2>{{ board.name }}</h2>
+                    <p>{{ board.description }}</p>
+                    <a href="{% url 'core:board' board_id=board.id %}" style="display: none;"></a>
+                    <div class="stabilize"></div>
+                </div>
+        {% endfor %}
+
+        <div class="board-silhouette">
+            <div class="cross">
+                <img src="{% static 'assets/icons/plus.svg' %}" alt="Board" class="filter-white">
+            </div>
+        </div>
+    </div>
+    <script>
+        document.querySelector('#logout')
+                .addEventListener('click', () => triggerMicro("{% url 'authentication:logout' %}", [], displayMessage, displayMessage))
+
+        document.querySelector('#profile-button')
+                .addEventListener('click', () => window.location.href = "{% url 'authentication:profile' %}")
+
+        document.querySelector('#add-board')
+                .addEventListener('click', () => {
+                    openModal("{% url 'core:board_creation' %}")
+                })
+        document.querySelector('.board-silhouette:has(.cross)')
+            .addEventListener('click', () => {
+                openModal("{% url 'core:board_creation' %}")
+            })
+
+        document.querySelectorAll('.board-silhouette').forEach((board) => {
+            board.addEventListener('click', () => {
+                board.querySelector('a').click()
+            })
+        });
+    </script>
+</body>
+</html>

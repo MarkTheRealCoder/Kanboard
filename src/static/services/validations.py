@@ -1,7 +1,5 @@
 import re
 
-from django.db.migrations.serializer import UUIDSerializer
-
 
 class ModelsAttributeError(Exception):
     class Reason(int):
@@ -40,7 +38,7 @@ class UserValidations:
 
     def generate_uuid(self):
         import uuid
-        return uuid.uuid1()
+        return uuid.uuid4().hex
 
     def result(self) -> 'UserValidations':
         self.___validate_name()
@@ -70,8 +68,8 @@ class UserValidations:
     def ___validate_password(self):
         if self.password is None:
             return
-        if re.match(r'^[a-zA-Z0-9\_\%\$\&\,\@\!\?]{8,}$', self.password) is None:
-            raise ModelsAttributeError("Password must contain only letters, numbers and/or special characters: '_', '!', '@', '$', '%', '&', '?', ','.\n"
+        if re.match(r'^[a-zA-Z0-9\_\%\$\&\@\!\?]{8,}$', self.password) is None:
+            raise ModelsAttributeError("Password must contain only letters, numbers and/or special characters: '_', '!', '@', '$', '%', '&', '?'.\n"
                                        "Password must be at least 8 characters long")
 
     def ___validate_image(self):
@@ -91,7 +89,7 @@ class UserValidations:
     def ___validate_surname(self):
         if self.surname is None:
             return
-        if re.match(r'^[a-zA-Z]+$', self.surname) is None:
+        if re.match(r'^[a-zA-Z ]+$', self.surname) is None:
             raise ModelsAttributeError("Surname must contain only letters")
 
 class BoardValidations:

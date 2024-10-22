@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>Kanboard - {{ user.username }}'s Profile</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'stylesheets/main.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'stylesheets/style.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'stylesheets/animations.css' %}">
+    <script type="application/javascript" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script type="application/javascript" src="{% static 'scripts/validators.js' %}"></script>
+    <script type="application/javascript" src="{% static 'scripts/micro.js' %}"></script>
+    <script type="application/javascript" src="{% static 'scripts/modals.js' %}"></script>
+    <script type="application/javascript" src="{% static 'scripts/messages.js' %}"></script>
+</head>
+<body id="dashboard">
+    <p id="service-message"></p>
+    <nav>
+        <div class="logo">
+            <h1>
+                <a href="{% url 'core:dashboard' %}">Kanboard</a>
+            </h1>
+        </div>
+        <button class="ghost-button"></button>
+        <button id="logout" class="button logout">
+            Logout
+        </button>
+    </nav>
+    <div class="dashboard justify-center">
+        <section class="first-section">
+            <div class="profile form-box">
+                <h2>{{ user.username }}'s Profile</h2>
+                <div id="profile-image">
+                    <div id="edit-image">
+                        <img src="{% static 'assets/icons/edit.svg' %}" alt="Board" class="filter-white">
+                    </div>
+                    <div class="cross">
+                    </div>
+                    {% if user.image %}
+                        <img src="{{ MEDIA_URL }}{{ user.image }}" alt="User's propic" id="propic">
+                    {% else %}
+                        <img src="{% static 'assets/images/penguin.png' %}" alt="User's propic" id="propic">
+                    {% endif %}
+                    <input id="image" type="file" name="image" accept="image/*" style="display: none;">
+                </div>
+                <div class="name-surname-row">
+                    <div class="input-container">
+                        <img src="../../static/assets/icons/user.svg" alt="Name Icon" class="input-icon">
+                        <input type="text" id="name" name="name" class="input-field" value="{{ user.name }}">
+                    </div>
+                    <div class="input-container">
+                        <img src="../../static/assets/icons/user.svg" alt="Surname Icon" class="input-icon" id="surname-icon">
+                        <input type="text" id="surname" name="surname" class="input-field" value="{{ user.surname }}">
+                    </div>
+                </div>
+                <div class="input-container">
+                    <img src="../../static/assets/icons/mail.svg" alt="Email Icon" class="input-icon">
+                    <input type="email" id="email" name="email" class="input-field" value="{{ user.email }}">
+                </div>
+                <div class="input-container">
+                    <img src="../../static/assets/icons/key.svg" alt="Password Icon" class="input-icon">
+                    <input type="password" id="password" name="password" class="input-field" placeholder="New Password">
+                </div>
+                <div class="input-container">
+                    <img src="../../static/assets/icons/key.svg" alt="Repeat Password Icon" class="input-icon">
+                    <input type="password" id="repeat-password" name="repeat-password" class="input-field" placeholder="Repeat Password" required>
+                </div>
+                <p>Thanks for being a member of our community for {{ days_membership }} days!</p>
+
+                <div>
+                    <button type="submit" id="confirm" class="button submit-button">Save</button>
+                    <button type="submit" id="discard" class="button discard-button" disabled>Discard changes</button>
+                </div>
+                <script>
+                    let inputs = [];
+                    let inputsMap = {}
+
+                    document.addEventListener('DOMContentLoaded', () => {
+                        document.querySelectorAll('input').forEach((input) => {
+                            inputsMap[input.name] = input.value ?? '';
+                        })
+                    });
+                    
+                    document.querySelector('#logout').addEventListener('click', () => {
+                        triggerMicro("{% url 'authentication:logout' %}", [], displayMessage, displayMessage)
+                    });
+                    
+                    document.querySelector('#confirm').addEventListener('click', (event) => {
+                        event.preventDefault();
+                        triggerMicro("{% url 'authentication:user_management' %}", inputs, (response) => {
+                            displayMessage(response);
+                            for (let input of inputs) {
+                                let inputElement = document.querySelector(`input[name="${input}"]`);
+                                inputsMap[input] = inputElement.value;
+                                if (input.includes('password') || input === 'image') {
+                                    inputElement.value = '';
+                                }
+                            }
+                            inputs = [];
+                            $('#discard').prop('disabled', true);
+                            
+                        }, displayMessage);
+                    });
+
+                    document.querySelectorAll('input').forEach((input) => {
+                        input.addEventListener('change', (event) => {
+                            $('#discard').prop('disabled', false);
+                            if (inputsMap[event.target.name] !== event.target.value) inputs.push(event.target.name);
+                            else inputs.pop(event.target.name);
+                            if (inputs.length === 0) $('#discard').prop('disabled', true);
+                        })
+                    });
+
+                    const edit_image = $('#edit-image');
+                    edit_image.on('click', (e) => {$('#image').click()})
+
+                    $('#image').change((e) => {
+                        const file = e.target.files[0];
+                        const reader = new FileReader();
+
+                        reader.onload = (e) => {
+                            $('#propic').attr('src', e.target.result);
+                        }
+
+                        reader.readAsDataURL(file);
+                    })
+
+                    $('#profile-image > img').hover(() => {edit_image.show()}, () => {})
+                    edit_image.hover(() => {}, () => {edit_image.hide()})
+                    
+                    $('#discard').click(() => {
+                        window.location.href = "{% url 'authentication:profile' %}";
+                    })
+
+                </script>
+            </div>
+        </section>
+    </div>
+</body>
+</html>

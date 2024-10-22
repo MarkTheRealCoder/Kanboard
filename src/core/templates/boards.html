@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>Kanboard - {{ board.name }}</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'stylesheets/main.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'stylesheets/style.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'stylesheets/animations.css' %}">
+    <script type="application/javascript" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script type="application/javascript" src="{% static 'scripts/validators.js' %}"></script>
+    <script type="application/javascript" src="{% static 'scripts/micro.js' %}"></script>
+    <script type="application/javascript" src="{% static 'scripts/modals.js' %}"></script>
+    <script type="application/javascript" src="{% static 'scripts/messages.js' %}"></script>
+</head>
+<body id="dashboard">
+    <p id="service-message"></p>
+    <div id="modal-wrapper"><div id="modal"></div></div>
+    <nav>
+        <div class="logo">
+            <h1>
+                <a href="{% url 'core:dashboard' %}">Kanboard</a>
+            </h1>
+        </div>
+        <button id="add-column" class="button action">Add column</button>
+        <button id="add-card" class="button action">Add card</button>
+        <button id="add-user" class="button action">Add user</button>
+        <button id="burndown" class="button action blue">Burndown</button>
+        <button class="ghost-button"></button>
+        <button id="logout" class="button logout">Logout</button>
+    </nav>
+    <div class="dashboard">
+        <div class="profile form-box infos-container">
+            <div id="profile-image">
+                <div id="edit-image">
+                    <img src="{% static 'assets/icons/edit.svg' %}" alt="Board" class="filter-white">
+                </div>
+                <div class="cross">
+                </div>
+                {% if board.image %}
+                    <img src="{{ MEDIA_URL }}{{ board.image }}" alt="User's propic" id="propic">
+                {% else %}
+                    <img src="{% static 'assets/images/penguin.png' %}" alt="User's propic" id="propic">
+                {% endif %}
+                <input class="changeable" id="image" type="file" name="image" accept="image/*" style="display: none;">
+            </div>
+            <div class="input-container">
+                <img src="../../static/assets/icons/tag.svg" alt="Board title icon" class="input-icon">
+                <input type="text" id="board_title" name="board_title" class="input-field changeable" value="{{ board.name }}">
+            </div>
+            <div class="input-container">
+                <img src="../../static/assets/icons/description.svg" alt="Board description icon" class="input-icon">
+                <textarea id="board_description" name="board_description" class="input-field changeable" maxlength="256" rows="4">{{ board.description }}</textarea>
+            </div>
+            <div>
+                <button type="submit" id="confirm" class="button submit-button">Save</button>
+                <button type="submit" id="discard" class="button discard-button" disabled>Discard changes</button>
+            </div>
+            <div id="open-close-menu"><img class="filter-white image-no-drag" src="../../static/assets/icons/menu.svg"></div>
+        </div>
+        {% for column in columns %}
+            <div class="board-silhouette column-silhouette" style="border-color: {{ column.color }}">
+                <div class="sticky-title">
+                    <h2>{{ column.title }}</h2>
+                    <p>{{ column.card_count }} cards</p>
+                </div>
+                <hr style="background-color: {{ column.color }}">
+                <div class="overflow-container">
+                    {% for card in column.cards %}
+                        <div class="card-silhouette" draggable="true" style="border-color: {{ card.color }}">
+                            <div class="non-sticky-title">
+                                <h4>{{ card.title }}</h4>
+                                {% if card.is_expired %}
+                                    <div class="filter-red expired" title="This card is expired in {{ card.expiration_date }}">
+                                        <img src="../../static/assets/icons/alert.svg" alt="Alert icon">
+                                    </div>
+                                {% else %}
+                                    <div class="filter-green expired" title="This card will expire in {{ card.expiration_date }}">
+                                        <img src="../../static/assets/icons/info.svg" alt="Alert icon">
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <hr style="background-color: {{ card.color }}">
+                            <p>{{ card.description }}</p>
+                            <hr style="background-color: {{ card.color }}">
+                            <p>Story points assigned <i class="story-points">{{ card.story_points }} SP</i></p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    <script>
+        document.querySelector('#logout')
+                .addEventListener('click', () => triggerMicro("{% url 'authentication:logout' %}", [], displayMessage, displayMessage))
+
+        document.querySelector('#add-column')
+                .addEventListener('click', () => {
+                    path = "{% url 'core:column_creation' board_id=board.id %}";
+                    console.log(path);
+                    openModal(path);
+                })
+
+        document.querySelector('#add-card')
+                .addEventListener('click', () => {
+                    openModal("{% url 'core:card_creation' board_id=board.id %}");
+                })
+
+        document.querySelector('#add-user')
+                .addEventListener('click', () => {
+                    console.log("adding user")
+                })
+
+        document.querySelector('#burndown')
+                .addEventListener('click', () => {
+                    window.location.href = "{% url 'core:burndown' board_id=board.id %}"
+                })
+        let inputs = [];
+        let inputsMap = {}
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.changeable').forEach((input) => {
+                inputsMap[input.name] = input.value ?? '';
+            })
+        });
+
+        document.querySelector('#confirm').addEventListener('click', (event) => {
+            event.preventDefault();
+            triggerMicro("update/", inputs, (response) => {
+                displayMessage(response);
+                for (let input of inputs) {
+                    let inputElement = document.querySelector(`.changeable[name="${input}"]`);
+                    inputsMap[input] = inputElement.value;
+                    if (input === 'image') {
+                        inputElement.value = '';
+                    }
+                }
+                inputs = [];
+                $('#discard').prop('disabled', true);
+
+            }, displayMessage);
+        });
+
+        document.querySelectorAll('input, textarea').forEach((input) => {
+            input.addEventListener('change', (event) => {
+                $('#discard').prop('disabled', false);
+                if (inputsMap[event.target.name] !== event.target.value) inputs.push(event.target.name);
+                else inputs.pop(event.target.name);
+                if (inputs.length === 0) $('#discard').prop('disabled', true);
+            })
+        });
+
+        const edit_image = $('#edit-image');
+        edit_image.on('click', (e) => {$('#image').click()})
+
+        $('#image').change((e) => {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+
+            reader.onload = (e) => {
+                $('#propic').attr('src', e.target.result);
+            }
+
+            reader.readAsDataURL(file);
+        })
+
+        $('#profile-image > img').hover(() => {edit_image.show()}, () => {})
+        edit_image.hover(() => {}, () => {edit_image.hide()})
+
+        $('#discard').click(() => {
+            window.location.href = "{% url 'authentication:profile' %}";
+        })
+
+        let status = false;
+
+        $('#open-close-menu').click(() => {
+            let transition = status ? '-100%' : '0';
+            status = !status;
+            $('.infos-container').css('translate', transition);
+        })
+
+    </script>
+</body>
+</html>

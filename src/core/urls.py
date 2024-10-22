@@ -1,7 +1,6 @@
-from django.urls import path
-
 from . import views
+from .models import APP_NAME
 
-app_name = 'core'
+app_name = APP_NAME
 
 urlpatterns = views.HANDLER.urls()
