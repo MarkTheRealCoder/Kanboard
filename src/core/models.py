@@ -36,7 +36,7 @@ class Column(models.Model):
     id = models.AutoField(primary_key=True)
     board_id = models.ForeignKey(Board, on_delete=models.CASCADE, db_column="board_id")
     title = models.CharField(max_length=100)
-    color = models.CharField(max_length=7)
+    color = models.CharField(max_length=7, default="#808080")
     description = models.TextField()
     index = models.IntegerField()
 
@@ -53,11 +53,11 @@ class Card(models.Model):
     column_id = models.ForeignKey(Column, on_delete=models.CASCADE, db_column="column_id")
     title = models.CharField(max_length=100)
     description = models.TextField()
-    color = models.CharField(max_length=7)
+    color = models.CharField(max_length=7, default="#808080")
     creation_date = models.DateTimeField()
-    expiration_date = models.DateTimeField()
-    completion_date = models.DateTimeField()
-    story_points = models.IntegerField()
+    expiration_date = models.DateTimeField(null=True, blank=True, default=None)
+    completion_date = models.DateTimeField(null=True, blank=True, default=None)
+    story_points = models.IntegerField(default=0)
     index = models.IntegerField()
 
     class Meta:

@@ -6,8 +6,13 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+function hideModal() {
+    $('#modal-wrapper').hide();
+}
+
 
 function openModal(path) {
+    console.log(path);
     fetch(path, {
         method: 'GET',
         headers: {
@@ -20,6 +25,7 @@ function openModal(path) {
     }).then(data => {
         const modalWrapper = $('#modal-wrapper');
         const modal = $('#modal');
+        console.log(data);
         modal.html(data);
         modalWrapper.show();
     }).catch(error => {
