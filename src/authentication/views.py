@@ -3,14 +3,13 @@ from datetime import timezone, datetime
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.views.decorators.csrf import requires_csrf_token
-from django.utils import timezone
 
-from static.services import RequestHandler, ModelsAttributeError, UserValidations, JsonResponses
-from static.utils.utils import response_error, get_user_from, response_success, check_board_invalid, check_user_invalid
+from static.services import RequestHandler, ModelsAttributeError, UserValidations
+from static.utils.utils import response_error, get_user_from, response_success, get_user, no_timezone
 from .models import User
 
 # Create your views here.
-HANDLER     = RequestHandler()
+HANDLER = RequestHandler()
 
 
 @HANDLER.bind("registration_submission", "register/submit/", request="POST", session=False)
@@ -23,8 +22,8 @@ def registration_submission(request):
         'username': request.POST.get('username', None),
         'email': request.POST.get('email', None),
         'password': request.POST.get('password', None),
-        'date_joined': timezone.now(),
-        'last_login': timezone.now()
+        'date_joined': no_timezone(datetime.now()),
+        'last_login': no_timezone(datetime.now())
     }
 
     try:
@@ -60,7 +59,7 @@ def login_submission(request):
             else:
                 break
 
-    to_filter = { field: key, "password":password }
+    to_filter = { field: key, "password": password }
     user = User.objects.filter(**to_filter).first()
 
     if not user:
@@ -77,6 +76,7 @@ def login_submission(request):
 def user_management(request):
 
     uuid = get_user_from(request)
+    user = get_user(User, uuid)
 
     updates = {
         'name': None,
@@ -86,20 +86,15 @@ def user_management(request):
         'image': None
     }
 
-    print(request.POST)
-    print(request.FILES)
-
     for key in updates.keys():
         if not key in request.POST.keys():
             continue
         updates[key] = request.POST.get(key)
 
-    updates = {k: v for k, v in updates.items() if v is not None}
+    updates = { k: v for k, v in updates.items() if v is not None }
 
     if img := request.FILES.get('image', None):
         updates['image'] = request.FILES.get('image')
-
-    user = User.objects.filter(uuid=uuid).first()
 
     try:
         UserValidations(User, **updates).result()
@@ -128,7 +123,7 @@ def user_management(request):
 @requires_csrf_token
 def logout(request): # Working view
     request.session.flush()
-    return redirect(reverse('no_auth:index'))
+    return redirect(reverse('no_auth:login'))
 
 
 @HANDLER.bind("profile", "account/", request='GET', session=True)
@@ -139,10 +134,11 @@ def profile(request):
     :param request: HttpRequest - The HTTP request object.
     :return: HttpResponse - The rendered HTML page with user details.
     """
-    user = User.objects.filter(uuid=get_user_from(request)).first()
+    uuid = get_user_from(request)
+    user = get_user(User, uuid)
 
-    days_membership = user.date_joined.replace(tzinfo=None)
-    days_membership = (datetime.now() - days_membership).days
+    days_membership = no_timezone(user.date_joined)
+    days_membership = (no_timezone(datetime.now()) - days_membership).days
 
     return render(request, "profile.html", {
         "user": user,

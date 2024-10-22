@@ -65,7 +65,6 @@
                 <div class="sticky-title">
                     <h2>{{ column.title }}</h2>
                     <p>{{ column.card_count }} cards</p>
-                    <a href="{% url 'core:edit_column' board_id=board.id column_id=column.id %}" style="display: none;"></a>
                 </div>
                 <hr style="background-color: {{ column.color }}">
                 <div class="overflow-container">

@@ -1,7 +1,5 @@
-from django.urls import path
-
-from .models import APP_NAME
 from . import views
+from .models import APP_NAME
 
 app_name = APP_NAME
 

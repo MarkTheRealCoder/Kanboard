@@ -1,8 +1,6 @@
 from django.db import models
 
-from Kanboard.settings import BASE_DIR
 from authentication.models import User
-
 
 # Create your models here.
 APP_NAME = "core"
@@ -12,7 +10,7 @@ class Board(models.Model):
     id = models.AutoField(primary_key=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE, db_column="owner")
     name = models.CharField(max_length=100)
-    description = models.TextField()
+    description = models.TextField(default="")
     image = models.ImageField(blank=True, null=True)
     creation_date = models.DateTimeField()
 

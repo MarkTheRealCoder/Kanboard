@@ -1,7 +1,5 @@
 import re
 
-from django.db.migrations.serializer import UUIDSerializer
-
 
 class ModelsAttributeError(Exception):
     class Reason(int):

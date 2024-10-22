@@ -19,13 +19,14 @@ function openModal(path) {
             'Content-Type': 'html/text',
             'X-CSRFToken': getCSRFToken()
         }
-    }).then(response => {
+    }).then(async response => {
         if (response.ok) return response.text();
-        throw new Error(`Request failed with status ${response.status}`);
+        let message = `Request failed: ${await response.text().then((error) => {return error;})}`;
+        displayMessage({message: message, status: 500});
+        throw new Error(message);
     }).then(data => {
         const modalWrapper = $('#modal-wrapper');
         const modal = $('#modal');
-        console.log(data);
         modal.html(data);
         modalWrapper.show();
     }).catch(error => {

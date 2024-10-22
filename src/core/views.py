@@ -2,21 +2,17 @@ from io import BytesIO
 
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
-
-from django.template.context_processors import request
 from django.urls import reverse
-
+from django.utils import timezone
 from django.views.decorators.csrf import requires_csrf_token
 
 from authentication.models import User
 from core.models import Board, Column, Card, Guest
-from static.services import RequestHandler, JsonResponses
-from django.utils import timezone
-
+from static.services import RequestHandler
 from static.utils.utils import get_user_from, response_error, get_board, \
-    check_user_not_owner_or_guest, check_user_invalid, check_board_invalid, \
-    get_expired_cards_of_board, get_cards_of_board, response_success, get_user, get_owner_of_board, is_owner_of_board, \
-    get_user_by_username
+    check_user_not_owner_or_guest, check_board_invalid, \
+    get_expired_cards_of_board, get_cards_of_board, response_success, is_owner_of_board, \
+    get_user_by_username, no_timezone
 
 # Create your views here.
 HANDLER = RequestHandler()
@@ -26,13 +22,14 @@ def board_view(request, board_id):
 
     uuid = get_user_from(request)
     board = get_board(Board, board_id)
-    columns = Column.objects.filter(board_id=board_id).all()
 
     if check_board_invalid(board):
         return response_error("Board not found.")
 
     if check_user_not_owner_or_guest(Board, Guest, uuid, board_id):
         return response_error("You do not have access to this board.")
+
+    columns = Column.objects.filter(board_id=board_id).all()
 
     board_info = {
         'id': board.id,
@@ -51,7 +48,10 @@ def board_view(request, board_id):
             self.creation_date = _card.creation_date
             self.expiration_date = _card.expiration_date if _card.expiration_date else 'Never'
             self.story_points = _card.story_points
-            self.is_expired = _card.expiration_date < timezone.now().replace(tzinfo=None) if _card.expiration_date else False
+            if _card.expiration_date:
+                self.is_expired = no_timezone(_card.expiration_date) < no_timezone(timezone.now())
+            else:
+                self.is_expired = False
 
     class TemplateColumn:
         def __init__(self, _column):
@@ -516,19 +516,17 @@ def create_board_view(request):
     :return: JsonResponse - The JSON response with the result of the operation.
     """
 
-    user = get_user_from(request)
+    uuid = get_user_from(request)
 
     name = request.POST.get("board_title")
-    description = request.POST.get("board_description")
 
-    if not name or not description:
-        return response_error("Name and description are required.")
+    if not name:
+        return response_error("Board's name is required.")
 
     try:
         new_board = Board.objects.create(
-            owner=user,
+            owner=uuid,
             name=name,
-            description=description,
             creation_date=timezone.now().replace(tzinfo=None)
         )
         new_board.save()
@@ -547,20 +545,32 @@ def create_column_view(request, board_id):
     :return: JsonResponse - The JSON response with the result of the operation.
     """
 
-    user = get_user_from(request)
+    uuid = get_user_from(request)
 
     title = request.POST.get("column_title")
+    color = request.POST.get("column_color")
     description = request.POST.get("column_description")
 
     if not title or not description:
         return response_error("Title and description are required.")
 
+    board = get_board(Board, board_id)
+
+    if check_board_invalid(board):
+        return redirect('core:dashboard')
+
+    column_index = Column.objects.filter(board_id=board_id).count()
+
+    if column_index != 0:
+        column_index -= 1
+
     try:
         new_column = Column.objects.create(
-            owner=user,
+            board_id=uuid,
             title=title,
+            color=color,
             description=description,
-            creation_date=timezone.now().replace(tzinfo=None)
+            index=column_index
         )
         new_column.save()
     except Exception as e:
@@ -760,17 +770,13 @@ def modal_board_creation(request):
         <div class="form-box" style="width: 100%; height: 100%; border-radius: 8px;">
             <h1 class="form-title">Create a new board</h1>
             <div class="input-container">
-                <img src="../../static/assets/icons/tag.svg" alt="Repeat Password Icon" class="input-icon">
+                <img src="../../static/assets/icons/tag.svg" alt="Title Icon" class="input-icon">
                 <input type="text" class="input-field" id="board_title" name="board_title" placeholder="Board title" required>
-            </div>
-            <div class="input-container">
-                <img src="../../static/assets/icons/description.svg" alt="Repeat Password Icon" class="input-icon">
-                <textarea class="input-field" id="board_description" name="board_description" maxlength="256" rows="4" placeholder="Board description" required></textarea>
             </div>
             <button type="submit" class="button submit-button" id="create">Create</button>
             <script>
                 document.querySelector("#create").addEventListener("click", () => {
-                    triggerMicro('new_board/', ['board_title', 'board_description'], displayMessage, displayMessage); 
+                    triggerMicro('new_board/', ['board_title'], displayMessage, displayMessage); 
                 });
             </script>
         </div>
@@ -785,17 +791,21 @@ def modal_column_creation(request, board_id):
         <div class="form-box" style="width: 100%; height: 100%; border-radius: 8px;">
             <h1 class="form-title">Create a new column</h1>
             <div class="input-container">
-                <img src="../../static/assets/icons/tag.svg" alt="Repeat Password Icon" class="input-icon">
+                <img src="../../static/assets/icons/tag.svg" alt="Title Icon" class="input-icon">
                 <input type="text" class="input-field" id="column_title" name="column_title" placeholder="Column title" required>
             </div>
             <div class="input-container">
-                <img src="../../static/assets/icons/description.svg" alt="Repeat Password Icon" class="input-icon">
+                <img src="../../static/assets/icons/description.svg" alt="Description Icon" class="input-icon">
                 <textarea class="input-field" id="column_description" name="column_description" maxlength="256" rows="4" placeholder="Column description" required></textarea>
+            </div>
+            <div class="input-container">
+                <img src="../../static/assets/icons/paint.svg" alt="Color Icon" class="input-icon">
+                <input class="input-field" type="color" id="color" name="color" value="#808080">
             </div>
             <button type="submit" class="button submit-button" id="create">Create</button>
             <script>
                 document.querySelector("#create").addEventListener("click", () => {{
-                    triggerMicro({reverse('core:create_column', kwargs=arguments)}, ['column_title', 'column_description'], displayMessage, displayMessage);
+                    triggerMicro('{reverse('core:create_column', kwargs=arguments)}', ['column_title', 'column_description', 'color'], displayMessage, displayMessage);
                     hideModal();
                 }});
             </script>
@@ -805,22 +815,34 @@ def modal_column_creation(request, board_id):
 
 @HANDLER.bind("card_creation", "board/<int:board_id>/creation/card/", request="GET", session=True)
 def modal_card_creation(request, board_id):
+    columns = [{'id': column.id, 'title': column.title} for column in Column.objects.filter(board_id=board_id)]
+    if not columns:
+        return HttpResponse("No columns available. You must have atleast one column before creating a card.", status=400)
     arguments = {'board_id':board_id}
     modal = f"""
         <div class="form-box" style="width: 100%; height: 100%; border-radius: 8px;">
             <h1 class="form-title">Create a new card</h1>
             <div class="input-container">
-                <img src="../../static/assets/icons/tag.svg" alt="Repeat Password Icon" class="input-icon">
+                <img src="../../static/assets/icons/tag.svg" alt="Title Icon" class="input-icon">
                 <input type="text" class="input-field" id="card_title" name="card_title" placeholder="Card title" required>
             </div>
             <div class="input-container">
-                <img src="../../static/assets/icons/description.svg" alt="Repeat Password Icon" class="input-icon">
+                <img src="../../static/assets/icons/description.svg" alt="Description Icon" class="input-icon">
                 <textarea class="input-field" id="card_description" name="card_description" maxlength="256" rows="4" placeholder="Card description" required></textarea>
+            </div>
+            <div class="input-container">
+                <img src="../../static/assets/icons/paint.svg" alt="Color Icon" class="input-icon">
+                <input class="input-field" type="color" id="color" name="color" value="#808080">
+            </div>
+            <div class="input-container">
+                <select id="column" name="cars">
+             """+ "\n".join([f"<option value={column['id']}>{column['title']}</option>" for column in columns]) + """
+                </select>
             </div>
             <button type="submit" class="button submit-button" id="create">Create</button>
             <script>
                 document.querySelector("#create").addEventListener("click", () => {
-                    f"triggerMicro({reverse('core:create_card', kwargs=arguments)}, ['card_title', 'card_description'], displayMessage, displayMessage);" 
+                    f"triggerMicro('{reverse('core:create_card', kwargs=arguments)}', ['card_title', 'card_description', 'color'], displayMessage, displayMessage);" 
                 });
             </script>
         </div>

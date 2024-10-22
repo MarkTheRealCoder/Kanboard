@@ -1,5 +1,4 @@
 # context_processors.py
-from django.conf import settings
 
 from Kanboard.settings import MEDIA_URL
 

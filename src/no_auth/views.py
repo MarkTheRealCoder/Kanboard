@@ -1,8 +1,7 @@
 from django.shortcuts import render, redirect
 from django.urls import reverse
-from django.views.decorators.csrf import requires_csrf_token
 
-from static.services import RequestHandler, JsonResponses
+from static.services import RequestHandler
 from static.utils.utils import get_user_from
 
 # Create your views here.

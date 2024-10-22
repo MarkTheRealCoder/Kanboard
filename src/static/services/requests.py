@@ -1,9 +1,7 @@
-import re
 from typing import Callable
 
 from django.http import HttpResponse, HttpRequest, JsonResponse
 from django.urls import path, resolve
-
 
 
 class RequestHandler:

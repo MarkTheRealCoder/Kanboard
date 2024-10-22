@@ -1,4 +1,4 @@
-from typing import Literal
+from datetime import datetime
 
 from django.db.models import QuerySet
 from django.http import HttpRequest
@@ -7,7 +7,6 @@ from django.utils import timezone
 from authentication.models import User
 from core.models import Board, Card, Guest
 from static.services import JsonResponses
-
 
 response = lambda status, message: JsonResponses.response(status, message)
 response_error = lambda message: JsonResponses.response(JsonResponses.ERROR, message)
@@ -62,3 +61,5 @@ def get_cards_of_board(card, board_id: int) -> QuerySet[Card]:
 def get_expired_cards_of_board(card, board_id: int) -> QuerySet[Card]:
     return card.objects.filter(board_id=board_id, expiration_date__lt=timezone.now())
 
+def no_timezone(dt):
+    return dt.replace(tzinfo=None)

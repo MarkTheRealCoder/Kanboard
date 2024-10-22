@@ -67,6 +67,19 @@ body {
     margin-bottom: 20px;
 }
 
+.input-container > .input-label {
+
+}
+
+.input-container > select {
+    width: 100%;
+    border: 1px solid #666;
+    background-color: #333;
+    color: var(--white);
+    border-radius: 5px;
+    font-size: 18px;
+}
+
 .input-icon {
     position: absolute;
     left: 10px;
@@ -101,6 +114,14 @@ textarea.input-field {
     color: var(--white);
     border-radius: 5px;
     font-size: 18px;
+}
+
+.input-field:is([type="color"]) {
+    padding: 4px 4px 4px 45px;
+}
+
+.input-field:is([type="color"]):hover {
+    cursor: pointer;
 }
 
 .submit-button {
@@ -489,6 +510,10 @@ nav button.blue:hover {
     height: 38px;
 }
 
+.infos-container:has(#open-close-menu) {
+    border-right: 1px solid var(--gray);
+}
+
 .infos-container {
     height: 100%;
     width: 300px;
@@ -508,14 +533,17 @@ nav button.blue:hover {
     width: var(--width);
     height: var(--height);
     top: calc(50% - var(--height) / 2);
-    right: calc(-1 * var(--width));
+    right: calc(-1 * (var(--width) - 1px));
     background-color: var(--dark-gray);
     border-bottom-right-radius: 8px;
     border-top-right-radius: 8px;
     display: flex;
     justify-content: center;
     align-items: center;
-    user-drag: none;
+
+    border: 1px solid var(--gray);
+    border-left: none;
+    cursor: pointer;
 }
 
 .infos-container > #open-close-menu > img {
@@ -626,7 +654,7 @@ div#modal {
     flex-direction: column;
     width: 700px;
     min-width: 700px;
-    height: 500px;
+    height: max(500px, fit-content);
     min-height: 500px;
     position: relative;
     z-index: 100;
