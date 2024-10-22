@@ -83,3 +83,13 @@ a:hover {
     scrollbar-width: thin; /* This makes the scrollbar thinner */
     scrollbar-color: #7e7e7e rgba(0, 0, 0, .4); /* thumb color | track color */
 }
+
+
+.image-no-drag {
+    -webkit-user-select: none; /* Chrome, Safari, Edge */
+    -ms-user-select: none; /* IE 10+ */
+    user-select: none; /* Standard syntax */
+
+    -webkit-user-drag: none; /* Disable drag for webkit browsers */
+    user-drag: none;
+}

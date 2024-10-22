@@ -5,15 +5,12 @@ from django.urls import reverse
 from django.views.decorators.csrf import requires_csrf_token
 from django.utils import timezone
 
-from Kanboard.settings import BASE_DIR
-
-from static.services import RequestHandler, ModelsAttributeError, UserValidations, JsonResponses, DBQuery, DBTable
+from static.services import RequestHandler, ModelsAttributeError, UserValidations, JsonResponses
 from static.utils.utils import response_error, get_user_from, response_success, check_board_invalid, check_user_invalid
 from .models import User
 
 # Create your views here.
-
-HANDLER = RequestHandler(BASE_DIR / 'db.sqlite3')
+HANDLER     = RequestHandler()
 
 
 @HANDLER.bind("registration_submission", "register/submit/", request="POST", session=False)
@@ -134,34 +131,21 @@ def logout(request): # Working view
     return redirect(reverse('no_auth:index'))
 
 
-queries = (
-    DBQuery("user", "You are not logged in.")
-        .filter(_user_uuid="PARAM(uuid)")
-        .only("name", "surname", "email", "username", "image", "date_joined")
-        .from_table(DBTable("User")),
-)
-
-@HANDLER.bind("profile", "account/", *queries, request='GET', session=True)
+@HANDLER.bind("profile", "account/", request='GET', session=True)
 @requires_csrf_token
-def profile(request, user):
+def profile(request):
     """
     Executes the query to retrieve user details after login.
     :param request: HttpRequest - The HTTP request object.
     :return: HttpResponse - The rendered HTML page with user details.
     """
+    user = User.objects.filter(uuid=get_user_from(request)).first()
 
-    class UserInterface:
-        def __init__(self, _user):
-            self.name = _user[0]
-            self.surname = _user[1]
-            self.email = _user[2]
-            self.username = _user[3]
-            self.image = _user[4]
-            self.days_membership = (datetime.now() - datetime.strptime(_user[5].split('.')[0], "%Y-%m-%d %H:%M:%S")).days
-
-    user = UserInterface(user)
+    days_membership = user.date_joined.replace(tzinfo=None)
+    days_membership = (datetime.now() - days_membership).days
 
     return render(request, "profile.html", {
-        "user": user
+        "user": user,
+        "days_membership": days_membership
     })
 

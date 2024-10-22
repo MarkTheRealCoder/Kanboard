@@ -2,12 +2,11 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.views.decorators.csrf import requires_csrf_token
 
-from Kanboard.settings import BASE_DIR
 from static.services import RequestHandler, JsonResponses
 from static.utils.utils import get_user_from
 
 # Create your views here.
-HANDLER = RequestHandler(BASE_DIR / 'db.sqlite3')
+HANDLER = RequestHandler()
 
 
 @HANDLER.bind('index', '', request="GET")

@@ -58,67 +58,40 @@
                 <button type="submit" id="confirm" class="button submit-button">Save</button>
                 <button type="submit" id="discard" class="button discard-button" disabled>Discard changes</button>
             </div>
+            <div id="open-close-menu"><img class="filter-white image-no-drag" src="../../static/assets/icons/menu.svg"></div>
         </div>
-        <div class="board-silhouette column-silhouette">
-            <div class="sticky-title">
-                <h2>Column 1</h2>
-                <p>## cards</p>
-            </div>
-            <hr>
-            <div class="overflow-container">
-                <div class="card-silhouette" draggable="true">
-                    <div class="non-sticky-title">
-                        <h4>Card 1</h4>
-                        {% if card.is_expired %}
-                            <div class="filter-red expired" title="Skoddi sesso">
-                                <img src="../../static/assets/icons/alert.svg" alt="Alert icon">
+        {% for column in columns %}
+            <div class="board-silhouette column-silhouette" style="border-color: {{ column.color }}">
+                <div class="sticky-title">
+                    <h2>{{ column.title }}</h2>
+                    <p>{{ column.card_count }} cards</p>
+                    <a href="{% url 'core:edit_column' board_id=board.id column_id=column.id %}" style="display: none;"></a>
+                </div>
+                <hr style="background-color: {{ column.color }}">
+                <div class="overflow-container">
+                    {% for card in column.cards %}
+                        <div class="card-silhouette" draggable="true" style="border-color: {{ card.color }}">
+                            <div class="non-sticky-title">
+                                <h4>{{ card.title }}</h4>
+                                {% if card.is_expired %}
+                                    <div class="filter-red expired" title="This card is expired in {{ card.expiration_date }}">
+                                        <img src="../../static/assets/icons/alert.svg" alt="Alert icon">
+                                    </div>
+                                {% else %}
+                                    <div class="filter-green expired" title="This card will expire in {{ card.expiration_date }}">
+                                        <img src="../../static/assets/icons/info.svg" alt="Alert icon">
+                                    </div>
+                                {% endif %}
                             </div>
-                        {% else %}
-                            <div class="filter-green expired" title="Skoddi sesso">
-                                <img src="../../static/assets/icons/info.svg" alt="Alert icon">
-                            </div>
-                        {% endif %}
-                    </div>
-                    <hr>
-                </div>
-                <div class="card-silhouette">
-                    <div class="non-sticky-title">
-                        <h4>Card 2</h4>
-                    </div>
-                    <hr>
-                </div>
-                <div class="card-silhouette">
-                    <div class="non-sticky-title">
-                        <h4>Card 3</h4>
-                    </div>
-                    <hr>
-                </div>
-                <div class="card-silhouette">
-                    <div class="non-sticky-title">
-                        <h4>Card 4</h4>
-                    </div>
-                    <hr>
-                </div>
-                <div class="card-silhouette">
-                    <div class="non-sticky-title">
-                        <h4>Card 5</h4>
-                    </div>
-                    <hr>
-                </div>
-                <div class="card-silhouette">
-                    <div class="non-sticky-title">
-                        <h4>Card 6</h4>
-                    </div>
-                    <hr>
-                </div>
-                <div class="card-silhouette">
-                    <div class="non-sticky-title">
-                        <h4>Card 7</h4>
-                    </div>
-                    <hr>
+                            <hr style="background-color: {{ card.color }}">
+                            <p>{{ card.description }}</p>
+                            <hr style="background-color: {{ card.color }}">
+                            <p>Story points assigned <i class="story-points">{{ card.story_points }} SP</i></p>
+                        </div>
+                    {% endfor %}
                 </div>
             </div>
-        </div>
+        {% endfor %}
     </div>
     <script>
         document.querySelector('#logout')
@@ -126,12 +99,14 @@
 
         document.querySelector('#add-column')
                 .addEventListener('click', () => {
-                    console.log("adding column")
+                    path = "{% url 'core:column_creation' board_id=board.id %}";
+                    console.log(path);
+                    openModal(path);
                 })
 
         document.querySelector('#add-card')
                 .addEventListener('click', () => {
-                    console.log("adding card")
+                    openModal("{% url 'core:card_creation' board_id=board.id %}");
                 })
 
         document.querySelector('#add-user')
@@ -197,6 +172,14 @@
 
         $('#discard').click(() => {
             window.location.href = "{% url 'authentication:profile' %}";
+        })
+
+        let status = false;
+
+        $('#open-close-menu').click(() => {
+            let transition = status ? '-100%' : '0';
+            status = !status;
+            $('.infos-container').css('translate', transition);
         })
 
     </script>

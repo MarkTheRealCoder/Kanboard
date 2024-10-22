@@ -1,14 +1,16 @@
-from getpass import getuser
 from io import BytesIO
 
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
+
+from django.template.context_processors import request
+from django.urls import reverse
+
 from django.views.decorators.csrf import requires_csrf_token
 
-from Kanboard.settings import BASE_DIR
 from authentication.models import User
 from core.models import Board, Column, Card, Guest
-from static.services import RequestHandler, JsonResponses, DBQuery, DBTable
+from static.services import RequestHandler, JsonResponses
 from django.utils import timezone
 
 from static.utils.utils import get_user_from, response_error, get_board, \
@@ -17,14 +19,14 @@ from static.utils.utils import get_user_from, response_error, get_board, \
     get_user_by_username
 
 # Create your views here.
-HANDLER = RequestHandler(BASE_DIR / 'db.sqlite3')
-
+HANDLER = RequestHandler()
 
 @HANDLER.bind("board", "board/<int:board_id>", session=True, request="GET")
 def board_view(request, board_id):
 
     uuid = get_user_from(request)
     board = get_board(Board, board_id)
+    columns = Column.objects.filter(board_id=board_id).all()
 
     if check_board_invalid(board):
         return response_error("Board not found.")
@@ -40,8 +42,30 @@ def board_view(request, board_id):
         'creation_date': board.creation_date
     }
 
+    class TemplateCard:
+        def __init__(self, _card):
+            self.id = _card.id
+            self.title = _card.title
+            self.description = _card.description
+            self.color = _card.color
+            self.creation_date = _card.creation_date
+            self.expiration_date = _card.expiration_date if _card.expiration_date else 'Never'
+            self.story_points = _card.story_points
+            self.is_expired = _card.expiration_date < timezone.now().replace(tzinfo=None) if _card.expiration_date else False
+
+    class TemplateColumn:
+        def __init__(self, _column):
+            self.id = _column.id
+            self.title = _column.title
+            self.color = _column.color
+            self.cards = [TemplateCard(card) for card in Card.objects.filter(column_id=_column.id).all()]
+            self.card_count = len(self.cards)
+
+    columns = [TemplateColumn(column) for column in columns]
+
     return render(request, "boards.html", {
-        "board": board_info
+        "board": board_info,
+        "columns": columns
     })
 
 
@@ -457,50 +481,29 @@ def burndown_view(request, board_id):
     })
 
 
-queries = (
-    DBQuery("user", "User not found!")
-        .from_table(DBTable("user"))
-        .filter(_user_uuid="PARAM(uuid)")
-        .only("username", "image"),
-    DBQuery("boards_owned", "There was a problem loading your boards!")
-        .from_table(DBTable("board"))
-        .filter(owner="PARAM(uuid)")
-        .only("name", "description", "image", DBTable("board").field("id")),
-    DBQuery("boards_guested", "There was a problem loading your boards!")
-        .from_table(DBTable("board").join(DBTable("guest"), f"board_id = {DBTable("board").field("id")}"))
-        .filter(user_id="PARAM(uuid)")
-        .only("name", "description", "image", DBTable("board").field("id"))
-
-)
-
-@HANDLER.bind('dashboard', 'dashboard/', *queries, request='GET', session=True)
+@HANDLER.bind('dashboard', 'dashboard/', request='GET', session=True)
 @requires_csrf_token
-def dashboard(request, user, boards_owned, boards_guested):
+def dashboard(request):
+    uuid = get_user_from(request)
 
-    print(boards_owned)
-    print(boards_guested)
+    user = User.objects.filter(uuid=uuid).first()
 
-    class TemplateUser:
-        def __init__(self, _user):
-            self.username = _user[0]
-            self.image = _user[1]
+    boards_owned = [board for board in Board.objects.filter(owner=uuid).all()]
+    boards_guested = [board for board in Board.objects.all() if Guest.objects.filter(user_id=uuid, board_id=board.id).exists()]
 
     class TemplateBoard:
-        def __init__(self, board, guest=False):
-            self.name = board[0]
-            self.description = board[1]
-            self.image = board[2]
-            self.id = board[3]
-            self.is_guest = guest
+        def __init__(self, board):
+            self.name = board.name
+            self.description = board.description
+            self.image = board.image
+            self.id = board.id
+            self.is_guest = board.owner != uuid
 
-    user = TemplateUser(user)
-
-    boards_owned = [TemplateBoard(boards_owned)] if isinstance(boards_owned, tuple) else [TemplateBoard(b) for b in boards_owned]
-    boards_guested = [TemplateBoard(boards_guested, guest=True)] if isinstance(boards_guested, tuple) else [TemplateBoard(b, guest=True) for b in boards_guested]
+    boards_owned = [TemplateBoard(board) for board in boards_owned + boards_guested]
 
     return render(request, 'dashboard.html', {
         'user': user,
-        'boards': boards_owned + boards_guested
+        'boards': boards_owned
     })
 
 
@@ -515,8 +518,6 @@ def create_board_view(request):
 
     user = get_user_from(request)
 
-    print(request.POST)
-
     name = request.POST.get("board_title")
     description = request.POST.get("board_description")
 
@@ -525,16 +526,82 @@ def create_board_view(request):
 
     try:
         new_board = Board.objects.create(
-            owner_id=user,
+            owner=user,
             name=name,
             description=description,
-            creation_date=timezone.now()
+            creation_date=timezone.now().replace(tzinfo=None)
         )
         new_board.save()
     except Exception as e:
         return response_error(f"Couldn't create the board: {e}")
 
     return redirect('core:board', board_id=new_board.id)
+
+
+@HANDLER.bind("create_column", "board/<int:board_id>/new_column/", session=True, request="POST")
+def create_column_view(request, board_id):
+    """
+    Creates a new column for the logged-in user.
+    :param request: HttpRequest - The HTTP request object.
+    :param uuid: str - The UUID of the authenticated user passed by the RequestHandler.
+    :return: JsonResponse - The JSON response with the result of the operation.
+    """
+
+    user = get_user_from(request)
+
+    title = request.POST.get("column_title")
+    description = request.POST.get("column_description")
+
+    if not title or not description:
+        return response_error("Title and description are required.")
+
+    try:
+        new_column = Column.objects.create(
+            owner=user,
+            title=title,
+            description=description,
+            creation_date=timezone.now().replace(tzinfo=None)
+        )
+        new_column.save()
+    except Exception as e:
+        return response_error(f"Couldn't create the column: {e}")
+
+    return redirect('core:board', board_id=board_id)
+
+
+@HANDLER.bind("create_card", "board/<int:board_id>/new_card/", session=True, request="POST")
+def create_column_view(request, board_id):
+    """
+    Creates a new column for the logged-in user.
+    :param request: HttpRequest - The HTTP request object.
+    :param uuid: str - The UUID of the authenticated user passed by the RequestHandler.
+    :return: JsonResponse - The JSON response with the result of the operation.
+    """
+
+    user = get_user_from(request)
+
+    title = request.POST.get("card_title")
+    description = request.POST.get("card_description")
+    column = request.POST.get("column")
+
+    if not title or not description:
+        return response_error("Title and description are required.")
+
+    if not column:
+        return response_error("You must select a column to create a new card.")
+
+    try:
+        new_card = Card.objects.create(
+            owner=user,
+            title=title,
+            description=description,
+            creation_date=timezone.now().replace(tzinfo=None)
+        )
+        new_card.save()
+    except Exception as e:
+        return response_error(f"Couldn't create the card: {e}")
+
+    return redirect('core:board', board_id=board_id)
 
 
 # @HANDLER.bind("add_user", "board/<int:board_id>/add_user/")
@@ -598,17 +665,12 @@ def create_board_view(request):
 #
 #
 
-queries = (
-    DBQuery("is_owner", "This board is not linked to your account.")
-        .from_table(DBTable("board"))
-        .filter(owner="PARAM(uuid)", id="PARAM(board_id)"),
-)
-
-@HANDLER.bind("remove_user", "board/<int:board_id>/remove_user/", *queries, request="POST", session=True)
+@HANDLER.bind("remove_user", "board/<int:board_id>/remove_user/", request="POST", session=True)
 @requires_csrf_token
 def remove_user_view(request, board_id):
     """
-    Executes the query to remove a user from a board using the username, but only if the current user is authenticated and is the owner of the board.
+    Executes the query to remove a user from a board using the username, but only if the current user is authenticated
+    and is the owner of the board.
     :param request: HttpRequest - The HTTP request object.
     :param board_id: int - The ID of the board from which the user will be removed.
     :return: JsonResponse - The JSON response with the result of the operation.
@@ -714,3 +776,54 @@ def modal_board_creation(request):
         </div>
     """
     return HttpResponse(modal)
+
+@HANDLER.bind("column_creation", "board/<int:board_id>/creation/column/", request="GET", session=True)
+def modal_column_creation(request, board_id):
+    arguments = {'board_id':board_id}
+    print(reverse('core:create_card', kwargs=arguments))
+    modal = f"""
+        <div class="form-box" style="width: 100%; height: 100%; border-radius: 8px;">
+            <h1 class="form-title">Create a new column</h1>
+            <div class="input-container">
+                <img src="../../static/assets/icons/tag.svg" alt="Repeat Password Icon" class="input-icon">
+                <input type="text" class="input-field" id="column_title" name="column_title" placeholder="Column title" required>
+            </div>
+            <div class="input-container">
+                <img src="../../static/assets/icons/description.svg" alt="Repeat Password Icon" class="input-icon">
+                <textarea class="input-field" id="column_description" name="column_description" maxlength="256" rows="4" placeholder="Column description" required></textarea>
+            </div>
+            <button type="submit" class="button submit-button" id="create">Create</button>
+            <script>
+                document.querySelector("#create").addEventListener("click", () => {{
+                    triggerMicro({reverse('core:create_column', kwargs=arguments)}, ['column_title', 'column_description'], displayMessage, displayMessage);
+                    hideModal();
+                }});
+            </script>
+        </div>
+    """
+    return HttpResponse(modal)
+
+@HANDLER.bind("card_creation", "board/<int:board_id>/creation/card/", request="GET", session=True)
+def modal_card_creation(request, board_id):
+    arguments = {'board_id':board_id}
+    modal = f"""
+        <div class="form-box" style="width: 100%; height: 100%; border-radius: 8px;">
+            <h1 class="form-title">Create a new card</h1>
+            <div class="input-container">
+                <img src="../../static/assets/icons/tag.svg" alt="Repeat Password Icon" class="input-icon">
+                <input type="text" class="input-field" id="card_title" name="card_title" placeholder="Card title" required>
+            </div>
+            <div class="input-container">
+                <img src="../../static/assets/icons/description.svg" alt="Repeat Password Icon" class="input-icon">
+                <textarea class="input-field" id="card_description" name="card_description" maxlength="256" rows="4" placeholder="Card description" required></textarea>
+            </div>
+            <button type="submit" class="button submit-button" id="create">Create</button>
+            <script>
+                document.querySelector("#create").addEventListener("click", () => {
+                    f"triggerMicro({reverse('core:create_card', kwargs=arguments)}, ['card_title', 'card_description'], displayMessage, displayMessage);" 
+                });
+            </script>
+        </div>
+    """
+    return HttpResponse(modal)
+

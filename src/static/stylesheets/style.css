@@ -493,6 +493,34 @@ nav button.blue:hover {
     height: 100%;
     width: 300px;
     background-color: var(--dark-gray);
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 100;
+    translate: -100%;
+    transition: translate .5s ease-in-out;
+}
+
+.infos-container > #open-close-menu {
+    --height: 50px;
+    --width: 30px;
+    position: absolute;
+    width: var(--width);
+    height: var(--height);
+    top: calc(50% - var(--height) / 2);
+    right: calc(-1 * var(--width));
+    background-color: var(--dark-gray);
+    border-bottom-right-radius: 8px;
+    border-top-right-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    user-drag: none;
+}
+
+.infos-container > #open-close-menu > img {
+    width: 70%;
+    height: 90%;
 }
 
 .expired {
@@ -520,6 +548,10 @@ nav button.blue:hover {
 
 .dashboard:has(section.burndown) {
     display: block;
+}
+
+.dashboard:has(> .infos-container) {
+    position: relative;
 }
 
 .burndown img {
@@ -668,13 +700,16 @@ div#modal-wrapper {
     margin: 1.5em 0;
     display: flex;
     justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    position: relative;
 }
 
 #edit-image {
     cursor: pointer;
     display: none;
     position: absolute;
-    top: 13%;
+    top: 0;
     width: 200px;
     height: 200px;
     border-radius: 50%;
