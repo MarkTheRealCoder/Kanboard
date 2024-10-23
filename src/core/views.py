@@ -1,35 +1,42 @@
+from datetime import datetime
 from io import BytesIO
 
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse
-from django.utils import timezone
 from django.views.decorators.csrf import requires_csrf_token
 
 from authentication.models import User
 from core.models import Board, Column, Card, Guest
 from static.services import RequestHandler
-from static.utils.utils import get_user_from, response_error, get_board, \
-    check_user_not_owner_or_guest, check_board_invalid, \
-    get_expired_cards_of_board, get_cards_of_board, response_success, is_owner_of_board, \
-    get_user_by_username, no_timezone
+from static.utils.utils import get_user_from, response_error, get_board, check_board_invalid, \
+    check_user_not_owner_or_guest, no_timezone, get_cards_of_board, get_expired_cards_of_board, get_user, \
+    check_user_not_owner, response_success, get_guest, get_columns, get_boards_owned, check_user_not_guest
 
 # Create your views here.
 HANDLER = RequestHandler()
 
-@HANDLER.bind("board", "board/<int:board_id>", session=True, request="GET")
+@HANDLER.bind("board", "board/<int:board_id>", request="GET", session=True)
+@requires_csrf_token
 def board_view(request, board_id):
+    """
+    Renders the board page with the board details and columns.
+    Requires the method to be GET and the user to be authenticated.
 
+    :param request: HttpRequest - The HTTP request object.
+    :param board_id: int - The ID of the board to display.
+    :return: HttpResponse - The rendered HTML page with the board details.
+    """
     uuid = get_user_from(request)
     board = get_board(Board, board_id)
 
     if check_board_invalid(board):
         return response_error("Board not found.")
 
-    if check_user_not_owner_or_guest(Board, Guest, uuid, board_id):
+    if check_user_not_owner_or_guest(Board, Guest, board_id, uuid):
         return response_error("You do not have access to this board.")
 
-    columns = Column.objects.filter(board_id=board_id).all()
+    columns = get_columns(Column, board_id)
 
     board_info = {
         'id': board.id,
@@ -49,7 +56,7 @@ def board_view(request, board_id):
             self.expiration_date = _card.expiration_date if _card.expiration_date else 'Never'
             self.story_points = _card.story_points
             if _card.expiration_date:
-                self.is_expired = no_timezone(_card.expiration_date) < no_timezone(timezone.now())
+                self.is_expired = no_timezone(_card.expiration_date) < no_timezone(datetime.now())
             else:
                 self.is_expired = False
 
@@ -69,20 +76,27 @@ def board_view(request, board_id):
     })
 
 
-@HANDLER.bind("columns", "columns/<int:board_id>", session=True, request="POST")
+@HANDLER.bind("columns", "columns/<int:board_id>", request="POST", session=True)
+@requires_csrf_token
 def columns_view(request, board_id):
+    """
+    Renders the columns of the board.
+    Requires the method to be POST and the user to be authenticated.
 
+    :param request: HttpRequest - The HTTP request object.
+    :param board_id: int - The ID of the board to display.
+    :return: JsonResponse - The JSON response with the columns of the board.
+    """
     uuid = get_user_from(request)
     board = get_board(Board, board_id)
 
     if check_board_invalid(board):
         return response_error("Board not found.")
 
-    if check_user_not_owner_or_guest(Board, Guest, uuid, board_id):
+    if check_user_not_owner_or_guest(Board, Guest, board_id, uuid):
         return response_error("You do not have access to this board.")
 
-    columns = Column.objects.filter(board_id=board_id).all()
-
+    columns = get_columns(Column, board_id)
     columns_info = [column for column in columns]
 
     return JsonResponse(columns_info, safe=False)
@@ -438,15 +452,23 @@ def columns_view(request, board_id):
 #
 #
 @HANDLER.bind("burndown", "burndown/<int:board_id>", request="GET", session=True)
+@requires_csrf_token
 def burndown_view(request, board_id):
+    """
+    Renders the burndown chart page with the board details.
+    Requires the method to be GET and the user to be authenticated.
 
+    :param request: HttpRequest - The HTTP request object.
+    :param board_id: int - The ID of the board to display.
+    :return: HttpResponse - The rendered HTML page with the burndown chart.
+    """
     uuid = get_user_from(request)
     board = get_board(Board, board_id)
 
     if check_board_invalid(board):
         return response_error("Board not found.")
 
-    if check_user_not_owner_or_guest(Board, Guest, uuid, board_id):
+    if check_user_not_owner_or_guest(Board, Guest, board_id, uuid):
         return response_error("You do not have access to this board.")
 
     cards = get_cards_of_board(Card, board_id)
@@ -461,7 +483,7 @@ def burndown_view(request, board_id):
             self.card_count = _card_count
 
     # column cards
-    columns = Column.objects.filter(board_id=board_id)
+    columns = get_columns(Column, board_id)
     cards_per_column = []
     for column in columns:
         template_column = TemplateColumn(column.title, Card.objects.filter(column_id=column.id).count())
@@ -484,12 +506,18 @@ def burndown_view(request, board_id):
 @HANDLER.bind('dashboard', 'dashboard/', request='GET', session=True)
 @requires_csrf_token
 def dashboard(request):
+    """
+    Renders the dashboard page with the user details and boards.
+    Requires the method to be GET and the user to be authenticated.
+
+    :param request: HttpRequest - The HTTP request object.
+    :return: HttpResponse - The rendered HTML page with the user details and boards.
+    """
     uuid = get_user_from(request)
+    user = get_user(User, uuid)
 
-    user = User.objects.filter(uuid=uuid).first()
-
-    boards_owned = [board for board in Board.objects.filter(owner=uuid).all()]
-    boards_guested = [board for board in Board.objects.all() if Guest.objects.filter(user_id=uuid, board_id=board.id).exists()]
+    boards_owned = [board for board in get_boards_owned(Board, uuid)]
+    boards_guested = [board for board in Board.objects.all() if not check_user_not_guest(Guest, board.id, uuid)]
 
     class TemplateBoard:
         def __init__(self, board):
@@ -507,15 +535,16 @@ def dashboard(request):
     })
 
 
-@HANDLER.bind("create_board", "dashboard/new_board/", session=True, request="POST")
+@HANDLER.bind("create_board", "dashboard/new_board/", request="POST", session=True)
+@requires_csrf_token
 def create_board_view(request):
     """
-    Creates a new board for the logged-in user.
+    Renders the create board page with the user details.
+    Requires the method to be POST and the user to be authenticated.
+
     :param request: HttpRequest - The HTTP request object.
-    :param uuid: str - The UUID of the authenticated user passed by the RequestHandler.
     :return: JsonResponse - The JSON response with the result of the operation.
     """
-
     uuid = get_user_from(request)
 
     name = request.POST.get("board_title")
@@ -527,8 +556,7 @@ def create_board_view(request):
         new_board = Board.objects.create(
             owner=uuid,
             name=name,
-            creation_date=timezone.now().replace(tzinfo=None)
-        )
+            creation_date=no_timezone(datetime.now()))
         new_board.save()
     except Exception as e:
         return response_error(f"Couldn't create the board: {e}")
@@ -536,16 +564,22 @@ def create_board_view(request):
     return redirect('core:board', board_id=new_board.id)
 
 
-@HANDLER.bind("create_column", "board/<int:board_id>/new_column/", session=True, request="POST")
+@HANDLER.bind("create_column", "board/<int:board_id>/new_column/", request="POST", session=True)
+@requires_csrf_token
 def create_column_view(request, board_id):
     """
     Creates a new column for the logged-in user.
+    Requires the method to be POST and the user to be authenticated.
+
     :param request: HttpRequest - The HTTP request object.
-    :param uuid: str - The UUID of the authenticated user passed by the RequestHandler.
+    :param board_id: int - The ID of the board where the column will be added.
     :return: JsonResponse - The JSON response with the result of the operation.
     """
-
     uuid = get_user_from(request)
+    board = get_board(Board, board_id)
+
+    if check_board_invalid(board):
+        return redirect('core:dashboard')
 
     title = request.POST.get("column_title")
     color = request.POST.get("column_color")
@@ -554,12 +588,7 @@ def create_column_view(request, board_id):
     if not title or not description:
         return response_error("Title and description are required.")
 
-    board = get_board(Board, board_id)
-
-    if check_board_invalid(board):
-        return redirect('core:dashboard')
-
-    column_index = Column.objects.filter(board_id=board_id).count()
+    column_index = get_columns(Column, board_id).count()
 
     if column_index != 0:
         column_index -= 1
@@ -579,16 +608,23 @@ def create_column_view(request, board_id):
     return redirect('core:board', board_id=board_id)
 
 
-@HANDLER.bind("create_card", "board/<int:board_id>/new_card/", session=True, request="POST")
-def create_column_view(request, board_id):
+@HANDLER.bind("create_card", "board/<int:board_id>/new_card/", request="POST", session=True)
+@requires_csrf_token
+def create_card_view(request, board_id):
     """
-    Creates a new column for the logged-in user.
+    Creates a new card for the logged-in user.
+    Requires the method to be POST and the user to be authenticated.
+
     :param request: HttpRequest - The HTTP request object.
-    :param uuid: str - The UUID of the authenticated user passed by the RequestHandler.
+    :param board_id: int - The ID of the board where the card will be added.
     :return: JsonResponse - The JSON response with the result of the operation.
     """
 
     user = get_user_from(request)
+    board = get_board(Board, board_id)
+
+    if check_board_invalid(board):
+        return redirect('core:dashboard')
 
     title = request.POST.get("card_title")
     description = request.POST.get("card_description")
@@ -605,7 +641,7 @@ def create_column_view(request, board_id):
             owner=user,
             title=title,
             description=description,
-            creation_date=timezone.now().replace(tzinfo=None)
+            creation_date=no_timezone(datetime.now())
         )
         new_card.save()
     except Exception as e:
@@ -685,17 +721,16 @@ def remove_user_view(request, board_id):
     :param board_id: int - The ID of the board from which the user will be removed.
     :return: JsonResponse - The JSON response with the result of the operation.
     """
-
     uuid = get_user_from(request)
 
-    if is_owner_of_board(Board, uuid, board_id):
+    if check_user_not_owner(Board, board_id, uuid):
         response_error("You don't own this board.")
 
     username_to_remove = request.POST.get("username")
 
     try:
-        uuid = str(get_user_by_username(User, username_to_remove).uuid)
-        if guest := Guest.objects.filter(user_id=uuid, board_id=board_id).first():
+        uuid = str(get_user(User, username=username_to_remove).uuid)
+        if guest := get_guest(Guest, board_id, uuid):
             guest.delete()
     except Exception as e:
         return response_error(f"Error: {e}")
@@ -706,14 +741,21 @@ def remove_user_view(request, board_id):
 @HANDLER.bind("burndown_image", "burndown/<int:board_id>/image", request="GET", session=True)
 @requires_csrf_token
 def burndown_image_view(request, board_id):
+    """
+    Generates a burndown image for the specified board.
+    Requires the method to be GET and the user to be authenticated.
 
+    :param request: HttpRequest - The HTTP request object.
+    :param board_id: int - The ID of the board to generate the burndown image.
+    :return: HttpResponse - The image response with the burndown chart.
+    """
     uuid = get_user_from(request)
     board = get_board(Board, board_id)
 
-    if not board:
+    if check_board_invalid(board):
         response_error("Board not found.")
 
-    if check_user_not_owner_or_guest(Board, Guest, uuid, board_id):
+    if check_user_not_owner_or_guest(Board, Guest, board_id, uuid):
         response_error("You do not have access to this board.")
 
     total_cards = get_cards_of_board(Card, board_id).count()
@@ -765,7 +807,15 @@ def burndown_image_view(request, board_id):
 
 
 @HANDLER.bind("board_creation", "dashboard/creation/", request="GET", session=True)
+@requires_csrf_token
 def modal_board_creation(request):
+    """
+    Renders the modal for creating a new board.
+    Requires the method to be GET and the user to be authenticated.
+
+    :param request: HttpRequest - The HTTP request object.
+    :return: HttpResponse - The HTML response with the modal for creating a new board.
+    """
     modal = """
         <div class="form-box" style="width: 100%; height: 100%; border-radius: 8px;">
             <h1 class="form-title">Create a new board</h1>
@@ -776,7 +826,7 @@ def modal_board_creation(request):
             <button type="submit" class="button submit-button" id="create">Create</button>
             <script>
                 document.querySelector("#create").addEventListener("click", () => {
-                    triggerMicro('new_board/', ['board_title'], displayMessage, displayMessage); 
+                    triggerMicro('new_board/', ['board_title'], displayMessage, displayMessage);
                 });
             </script>
         </div>
@@ -784,9 +834,19 @@ def modal_board_creation(request):
     return HttpResponse(modal)
 
 @HANDLER.bind("column_creation", "board/<int:board_id>/creation/column/", request="GET", session=True)
+@requires_csrf_token
 def modal_column_creation(request, board_id):
+    """
+    Renders the modal for creating a new column.
+    Requires the method to be GET and the user to be authenticated.
+
+    :param request: HttpRequest - The HTTP request object.
+    :param board_id: int - The ID of the board where the column will be added.
+    :return: HttpResponse - The HTML response with the modal for creating a new column.
+    """
     arguments = {'board_id':board_id}
     print(reverse('core:create_card', kwargs=arguments))
+
     modal = f"""
         <div class="form-box" style="width: 100%; height: 100%; border-radius: 8px;">
             <h1 class="form-title">Create a new column</h1>
@@ -813,12 +873,24 @@ def modal_column_creation(request, board_id):
     """
     return HttpResponse(modal)
 
+
 @HANDLER.bind("card_creation", "board/<int:board_id>/creation/card/", request="GET", session=True)
+@requires_csrf_token
 def modal_card_creation(request, board_id):
-    columns = [{'id': column.id, 'title': column.title} for column in Column.objects.filter(board_id=board_id)]
+    """
+    Renders the modal for creating a new card.
+    Requires the method to be GET and the user to be authenticated.
+
+    :param request: HttpRequest - The HTTP request object.
+    :param board_id: int - The ID of the board where the card will be added.
+    :return: HttpResponse - The HTML response with the modal for creating a new card.
+    """
+    columns = [{'id': column.id, 'title': column.title} for column in get_columns(Column, board_id)]
     if not columns:
-        return HttpResponse("No columns available. You must have atleast one column before creating a card.", status=400)
+        return HttpResponse("No columns available. You must have at least one column before creating a card.", status=400)
+
     arguments = {'board_id':board_id}
+
     modal = f"""
         <div class="form-box" style="width: 100%; height: 100%; border-radius: 8px;">
             <h1 class="form-title">Create a new card</h1>
@@ -836,14 +908,14 @@ def modal_card_creation(request, board_id):
             </div>
             <div class="input-container">
                 <select id="column" name="cars">
-             """+ "\n".join([f"<option value={column['id']}>{column['title']}</option>" for column in columns]) + """
+             """+ "\n".join([f"<option value={column['id']}>{column['title']}</option>" for column in columns]) + f"""
                 </select>
             </div>
             <button type="submit" class="button submit-button" id="create">Create</button>
             <script>
-                document.querySelector("#create").addEventListener("click", () => {
-                    f"triggerMicro('{reverse('core:create_card', kwargs=arguments)}', ['card_title', 'card_description', 'color'], displayMessage, displayMessage);" 
-                });
+                document.querySelector("#create").addEventListener("click", () => {{
+                    triggerMicro('{reverse('core:create_card', kwargs=arguments)}', ['card_title', 'card_description', 'color'], displayMessage, displayMessage);
+                }});
             </script>
         </div>
     """
