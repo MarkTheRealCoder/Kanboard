@@ -80,7 +80,7 @@ def get_expired_cards_of_board(card, board_id: int) -> QuerySet[Card]:
     :param board_id: The board's ID.
     :return: The expired cards of the board.
     """
-    return get_cards_of_board(card, board_id).filter(expiration_date__lt=timezone.now())
+    return get_cards_of_board(card, board_id).filter(expiration_date__lt=datetime.now())
 
 
 def get_user(user, uuid: str = None, username: str = None) -> User or None:
@@ -139,7 +139,7 @@ def check_user_not_guest(guest, board_id: int, uuid: str) -> bool:
     return get_guest(guest, board_id, uuid) is None
 
 
-def check_user_not_owner_or_guest(board, guest, uuid: str, board_id: int) -> bool:
+def check_user_not_owner_or_guest(board, guest, board_id: int, uuid: str) -> bool:
     """
     Checks if the user is not the owner or a guest of the board.
 
@@ -150,6 +150,39 @@ def check_user_not_owner_or_guest(board, guest, uuid: str, board_id: int) -> boo
     :return: True if the user is not the owner or a guest, False otherwise.
     """
     return check_user_not_owner(board, board_id, uuid) and check_user_not_guest(guest, board_id, uuid)
+
+
+def get_columns(column, board_id: int) -> QuerySet[Card]:
+    """
+    Gets the columns of the board.
+
+    :param column: The column model.
+    :param board_id: The board's ID.
+    :return: The columns of the board.
+    """
+    return column.objects.filter(board_id=board_id).all()
+
+
+def get_cards(card, column_id: int) -> QuerySet[Card]:
+    """
+    Gets the cards of the column.
+
+    :param card: The card model.
+    :param column_id: The column's ID.
+    :return: The cards of the column.
+    """
+    return card.objects.filter(column_id=column_id).all()
+
+
+def get_boards_owned(board, uuid: str) -> QuerySet[Board]:
+    """
+    Gets the boards owned by the user.
+
+    :param board: The board model.
+    :param uuid: The user's UUID.
+    :return: The boards owned by the user.
+    """
+    return board.objects.filter(owner=uuid).all()
 
 
 def no_timezone(dt: datetime) -> datetime:
