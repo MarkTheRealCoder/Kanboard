@@ -18,40 +18,21 @@ def get_user_from(request: HttpRequest) -> str:
     return request.session.get('uuid', None)
 
 
-def check_user_invalid(user: str) -> bool:
-    return user is None
-
-
-def get_board(board, board_id: int) -> Board:
-    return board.objects.filter(id=board_id).first()
-
-
-def get_user(user, user_id: str) -> User:
-    return user.objects.filter(uuid=user_id).first()
-
-
-def get_user_by_username(user, username: str) -> User:
-    return user.objects.filter(username=username).first()
-
-
-def is_owner_of_board(board, user: str, board_id: int) -> bool:
-    return board.objects.filter(id=board_id, owner=user).first()
+def check_user_invalid(uuid: str) -> bool:
+    return uuid is None
 
 
 def check_board_invalid(board: Board) -> bool:
     return board is None
 
 
-def check_user_not_owner(board, user: str) -> bool:
-    return not board.objects.filter(owner_id=user).exists()
+def get_board(board, board_id: int, owner: str = None) -> Board or None:
+    keywords = { 'id': board_id }
 
+    if owner:
+        keywords['owner'] = owner
 
-def check_user_not_guest(guest, user: str, board_id: int) -> bool:
-    return not guest.objects.filter(user_id=user, board_id=board_id).exists()
-
-
-def check_user_not_owner_or_guest(board, guest, user: str, board_id: int) -> bool:
-    return check_user_not_owner(board, user) and check_user_not_guest(guest, user, board_id)
+    return board.objects.filter(**keywords).first()
 
 
 def get_cards_of_board(card, board_id: int) -> QuerySet[Card]:
@@ -59,7 +40,36 @@ def get_cards_of_board(card, board_id: int) -> QuerySet[Card]:
 
 
 def get_expired_cards_of_board(card, board_id: int) -> QuerySet[Card]:
-    return card.objects.filter(board_id=board_id, expiration_date__lt=timezone.now())
+    return get_cards_of_board(card, board_id).filter(expiration_date__lt=timezone.now())
 
-def no_timezone(dt):
+
+def get_user(user, uuid: str = None, username: str = None) -> User or None:
+    keywords = {}
+
+    if uuid:
+        keywords = { 'uuid': uuid }
+
+    if username:
+        keywords = { 'username': username }
+
+    return user.objects.filter(**keywords).first()
+
+
+def get_guest(guest, board_id: int, uuid: str) -> Guest or None:
+    return guest.objects.filter(user_id=uuid, board_id=board_id).first()
+
+
+def check_user_not_owner(board, board_id: int, uuid: str) -> bool:
+    return get_board(board, board_id, uuid) is None
+
+
+def check_user_not_guest(guest, board_id: int, uuid: str) -> bool:
+    return get_guest(guest, board_id, uuid) is None
+
+
+def check_user_not_owner_or_guest(board, guest, uuid: str, board_id: int) -> bool:
+    return check_user_not_owner(board, board_id, uuid) and check_user_not_guest(guest, board_id, uuid)
+
+
+def no_timezone(dt: datetime) -> datetime:
     return dt.replace(tzinfo=None)

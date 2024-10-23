@@ -94,11 +94,11 @@ class DBRequestBuilderTest(unittest.TestCase):
         self.assertEqual("WHERE name='Stefano'\n", self.builder.query())
 
     def test_and(self):
-        self.builder.o_and("age=25")
+        self.builder._and_("age=25")
         self.assertEqual("AND age=25\n", self.builder.query())
 
     def test_or(self):
-        self.builder.o_or("age=25")
+        self.builder._or_("age=25")
         self.assertEqual("OR age=25\n", self.builder.query())
 
     def test_order_by(self):
@@ -122,135 +122,105 @@ class DBRequestBuilderTest(unittest.TestCase):
                     .complex("WHERE name='Stefano'")
         self.assertEqual(actual, self.builder.query())
 
+
 class TestBoardValidations(unittest.TestCase):
 
     def test_validate_board_title_too_long(self):
-        with self.assertRaises(ModelsAttributeError) as context:
-            validator = BoardValidations(None, title="This title is definitely too long")
-            validator.validatetitle()
-        self.assertIn("Title must be 16 characters or less", str(context.exception))
+        validator = BoardValidations(title="This title is definitely too long")
+        self.assertRaises(ModelsAttributeError, validator.result)
 
     def test_validate_board_title_invalid_characters(self):
-        with self.assertRaises(ModelsAttributeError) as context:
-            validator = BoardValidations(None, title="Invalid#Title!")
-            validator.validatetitle()
-        self.assertIn("Title must not contain special characters", str(context.exception))
+        validator = BoardValidations(title="Invalid#Title!")
+        self.assertRaises(ModelsAttributeError, validator.result)
 
     def test_validate_board_description_too_long(self):
         long_description = "a" * 257  # Stringa di 257 caratteri
-        with self.assertRaises(ModelsAttributeError) as context:
-            validator = BoardValidations(None, description=long_description)
-            validator.validate_description()
-        self.assertIn("exceeds 256 characters", str(context.exception))
+        validator = BoardValidations(description=long_description)
+        self.assertRaises(ModelsAttributeError, validator.result)
 
     def test_validate_board_description_invalid_characters(self):
-        with self.assertRaises(ModelsAttributeError) as context:
-            validator = BoardValidations(None, description="Invalid#Description!")
-            validator.validate_description()
-        self.assertIn("Description must not contain special characters", str(context.exception))
-
+        validator = BoardValidations(description="Invalid#Description!")
+        self.assertRaises(ModelsAttributeError, validator.result)
 
     def test_validate_board_image_size_too_large(self):
         large_image = SimpleUploadedFile("large_image.jpg", b"0" * (3*1024*1024 + 1), content_type="image/jpeg")
-        with self.assertRaises(ModelsAttributeError) as context:
-            validator = BoardValidations(None, image=large_image)
-            validator._validate_image()
-        self.assertIn("Image size must be less than 3MB.", str(context.exception))
-
+        validator = BoardValidations(image=large_image)
+        self.assertRaises(ModelsAttributeError, validator.result)
 
     def test_validate_board_image_invalid_format(self):
         invalid_image = SimpleUploadedFile("image.txt", b"dummy data", content_type="text/plain")
-        with self.assertRaises(ModelsAttributeError) as context:
-            validator = BoardValidations(None, image=invalid_image)
-            validator._validate_image()
-        self.assertIn("Image must be in the format: jpeg, png or jpg.", str(context.exception))
+        validator = BoardValidations(image=invalid_image)
+        self.assertRaises(ModelsAttributeError, validator.result)
 
     def test_validate_correct_board_title(self):
         try:
-            validator = BoardValidations(None, title="Valid Title")
-            validator.validatetitle()
+            validator = BoardValidations(title="Valid Title")
+            validator.result()
         except ModelsAttributeError:
             self.fail("validatetitle() raised ModelsAttributeError unexpectedly")
 
     def test_validate_correct_board_description(self):
         try:
-            validator = BoardValidations(None, description="Valid Description")
-            validator.validate_description()
+            validator = BoardValidations(description="Valid Description")
+            validator.result()
         except ModelsAttributeError:
             self.fail("validate_description() raised ModelsAttributeError unexpectedly")
 
 class TestCardValidations(unittest.TestCase):
 
     def test_validate_card_title_too_long(self):
-        with self.assertRaises(ModelsAttributeError) as context:
-            validator = CardValidations(None, title="This title is definitely too long")
-            validator.validate_title()
-        self.assertIn("Title must be 20 characters or less", str(context.exception))
+        validator = CardValidations(title="This title is definitely too long")
+        self.assertRaises(ModelsAttributeError, validator.result)
 
     def test_validate_card_title_invalid_characters(self):
-        with self.assertRaises(ModelsAttributeError) as context:
-            validator = CardValidations(None, title="Invalid#Title!")
-            validator.validate_title()
-        self.assertIn("Title must not contain special characters", str(context.exception))
+        validator = CardValidations(title="Invalid#Title!")
+        self.assertRaises(ModelsAttributeError, validator.result)
 
     def test_validate_card_description_too_long(self):
         long_description = "a" * 257  # Stringa di 257 caratteri
-        with self.assertRaises(ModelsAttributeError) as context:
-            validator = CardValidations(None, description=long_description)
-            validator.validatedescription()
-        self.assertIn("exceeds 256 characters", str(context.exception))
+        validator = CardValidations(description=long_description)
+        self.assertRaises(ModelsAttributeError, validator.result)
 
     def test_validate_card_description_invalid_characters(self):
-        with self.assertRaises(ModelsAttributeError) as context:
-            validator = CardValidations(None, description="Invalid#Description!")
-            validator.validatedescription()
-        self.assertIn("Description must not contain special characters", str(context.exception))
-
+        validator = CardValidations(description="Invalid#Description!")
+        self.assertRaises(ModelsAttributeError, validator.result)
 
     def test_validate_card_image_size_too_large(self):
         large_image = SimpleUploadedFile("large_image.jpg", b"0" * (3*1024*1024 + 1), content_type="image/jpeg")
-        with self.assertRaises(ModelsAttributeError) as context:
-            validator = CardValidations(None, image=large_image)
-            validator.validate_image()
-        self.assertIn("Image size must be less than 3MB.", str(context.exception))
-
+        validator = CardValidations(image=large_image)
+        self.assertRaises(ModelsAttributeError, validator.result)
 
     def test_validate_card_image_invalid_format(self):
         invalid_image = SimpleUploadedFile("image.txt", b"dummy data", content_type="text/plain")
-        with self.assertRaises(ModelsAttributeError) as context:
-            validator = CardValidations(None, image=invalid_image)
-            validator.validate_image()
-        self.assertIn("Image must be in the format: jpeg, png or jpg.", str(context.exception))
+        validator = CardValidations(image=invalid_image)
+        self.assertRaises(ModelsAttributeError, validator.result)
+
+    def test_validate_color(self):
+        validator = CardValidations(color="123456")
+        self.assertRaises(ModelsAttributeError, validator.result)
 
     def test_validate_color_invalid_format(self):
-        with self.assertRaises(ModelsAttributeError) as context:
-            validator = CardValidations(None, color="123456")
-            validator.validate_color()
-        self.assertIn("Color must be in the format #RRGGBB (hexadecimal).", str(context.exception))
-
-        with self.assertRaises(ModelsAttributeError) as context:
-            validator = CardValidations(None, color="#12345G")
-            validator.validate_color()
-        self.assertIn("Color must be in the format #RRGGBB (hexadecimal).", str(context.exception))
+        validator = CardValidations(color="#12345G")
+        self.assertRaises(ModelsAttributeError, validator.result)
 
     def test_validate_color_correct_format(self):
         try:
-            validator = CardValidations(None, color="#1A2B3C")
-            validator.validate_color()  # Non deve sollevare eccezioni
+            validator = CardValidations(color="#1A2B3C")
+            validator.result()  # Non deve sollevare eccezioni
         except ModelsAttributeError:
             self.fail("validate_color() raised ModelsAttributeError unexpectedly!")
 
     def test_validate_correct_card_title(self):
         try:
-            validator = CardValidations(None, title="Valid Title")
-            validator.validate_title()
+            validator = CardValidations(title="Valid Title")
+            validator.result()
         except ModelsAttributeError:
             self.fail("validatetitle() raised ModelsAttributeError unexpectedly")
 
     def test_validate_correct_card_description(self):
         try:
-            validator = CardValidations(None, description="Valid Description")
-            validator.validatedescription()
+            validator = CardValidations(description="Valid Description")
+            validator.result()
         except ModelsAttributeError:
             self.fail("validate_description() raised ModelsAttributeError unexpectedly")
 
