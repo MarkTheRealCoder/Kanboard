@@ -3,7 +3,31 @@ import unittest
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from static.services import ModelsAttributeError
-from static.services.validations import BoardValidations, CardValidations, UserValidations
+from static.services.validations import BoardValidations, CardValidations, UserValidations, ColumnValidations, EXISTENCE
+
+
+class TestModelsAttributeError(unittest.TestCase):
+
+
+    def test_is_pattern_missing(self):
+        error = ModelsAttributeError("Error message")
+        self.assertTrue(error.is_pattern())
+
+
+    def test_is_pattern_present(self):
+        error = ModelsAttributeError(reason=ModelsAttributeError.Reason(3))
+        self.assertFalse(error.is_pattern())
+
+
+    def test_is_existence_missing(self):
+        error = ModelsAttributeError("Example already exists")
+        self.assertFalse(error.is_existence())
+
+
+    def test_is_existence_present(self):
+        error = ModelsAttributeError("Example already exists", EXISTENCE)
+        self.assertTrue(error.is_existence())
+
 
 
 class TestUserValidations(unittest.TestCase):
@@ -178,6 +202,64 @@ class TestBoardValidations(unittest.TestCase):
     def test_validate_board_image_invalid_format(self):
         image = SimpleUploadedFile("image.txt", b"dummy data", content_type="text/plain")
         validator = BoardValidations(image=image)
+        self.assertRaises(ModelsAttributeError, validator.result)
+
+
+
+class TestColumnValidations(unittest.TestCase):
+
+
+    def test_validate_column_title_ok(self):
+        validator = ColumnValidations(title="Valid title")
+        try:
+            validator.result()
+        except ModelsAttributeError as e:
+            self.fail(f"result() raised ModelsAttributeError unexpectedly: {e}")
+
+
+    def test_validate_column_title_too_long(self):
+        validator = ColumnValidations(title="This title is definitely too long")
+        self.assertRaises(ModelsAttributeError, validator.result)
+
+
+    def test_validate_column_title_invalid_characters(self):
+        validator = ColumnValidations(title="Invalid#Title!")
+        self.assertRaises(ModelsAttributeError, validator.result)
+
+
+    def test_validate_column_description_ok(self):
+        validator = ColumnValidations(description="Valid description")
+        try:
+            validator.result()
+        except ModelsAttributeError as e:
+            self.fail(f"result() raised ModelsAttributeError unexpectedly: {e}")
+
+
+    def test_validate_column_description_too_long(self):
+        validator = ColumnValidations(description=("a" * 257))
+        self.assertRaises(ModelsAttributeError, validator.result)
+
+
+    def test_validate_column_description_invalid_characters(self):
+        validator = ColumnValidations(description="Invalid#Description!")
+        self.assertRaises(ModelsAttributeError, validator.result)
+
+
+    def test_validate_column_color_ok(self):
+        validator = ColumnValidations(color="#1A2B3C")
+        try:
+            validator.result()
+        except ModelsAttributeError as e:
+            self.fail(f"result() raised ModelsAttributeError unexpectedly: {e}")
+
+
+    def test_validate_color_invalid_format(self):
+        validator = ColumnValidations(color="123456")
+        self.assertRaises(ModelsAttributeError, validator.result)
+
+
+    def test_validate_color_invalid_length(self):
+        validator = ColumnValidations(color="#12345")
         self.assertRaises(ModelsAttributeError, validator.result)
 
 
