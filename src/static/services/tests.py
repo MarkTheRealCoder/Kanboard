@@ -3,7 +3,122 @@ import unittest
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from static.services import ModelsAttributeError
-from static.services.validations import BoardValidations, CardValidations
+from static.services.validations import BoardValidations, CardValidations, UserValidations
+
+
+class TestUserValidations(unittest.TestCase):
+
+
+    def test_validate_user_name_ok(self):
+        validator = UserValidations(name="Validname")
+        try:
+            validator.result()
+        except ModelsAttributeError as e:
+            self.fail(f"result() raised ModelsAttributeError unexpectedly: {e}")
+
+
+    def test_validate_user_name_too_long(self):
+        validator = UserValidations(name="This name is definitely too long")
+        self.assertRaises(ModelsAttributeError, validator.result)
+
+
+    def test_validate_user_name_invalid_characters(self):
+        validator = UserValidations(name="Invalid#Name!")
+        self.assertRaises(ModelsAttributeError, validator.result)
+
+
+    def test_validate_user_surname_ok(self):
+        validator = UserValidations(surname="Valid surname")
+        try:
+            validator.result()
+        except ModelsAttributeError as e:
+            self.fail(f"result() raised ModelsAttributeError unexpectedly: {e}")
+
+
+    def test_validate_user_surname_too_long(self):
+        validator = UserValidations(surname="This surname is definitely too long")
+        self.assertRaises(ModelsAttributeError, validator.result)
+
+
+    def test_validate_user_surname_invalid_characters(self):
+        validator = UserValidations(surname="Invalid#Surname!")
+        self.assertRaises(ModelsAttributeError, validator.result)
+
+
+    def test_validate_user_email_ok(self):
+        validator = UserValidations(email="ex.amp.le@example.com")
+        try:
+            validator.result()
+        except ModelsAttributeError as e:
+            self.fail(f"result() raised ModelsAttributeError unexpectedly: {e}")
+
+
+    def test_validate_user_email_invalid_format(self):
+        validator = UserValidations(email="invalid_email")
+        self.assertRaises(ModelsAttributeError, validator.result)
+
+
+    def test_validate_user_username_ok(self):
+        validator = UserValidations(username="valid_username")
+        try:
+            validator.result()
+        except ModelsAttributeError as e:
+            self.fail(f"result() raised ModelsAttributeError unexpectedly: {e}")
+
+
+    def test_validate_user_username_too_long(self):
+        validator = UserValidations(username="this_username_is_definitely_too_long")
+        self.assertRaises(ModelsAttributeError, validator.result)
+
+
+    def test_validate_user_username_invalid_characters(self):
+        validator = UserValidations(username="invalid#username")
+        self.assertRaises(ModelsAttributeError, validator.result)
+
+
+    def test_validate_user_password_ok(self):
+        validator = UserValidations(password="valid_password")
+        try:
+            validator.result()
+        except ModelsAttributeError as e:
+            self.fail(f"result() raised ModelsAttributeError unexpectedly: {e}")
+
+
+    def test_validate_user_password_too_short(self):
+        validator = UserValidations(password="short")
+        self.assertRaises(ModelsAttributeError, validator.result)
+
+
+    def test_validate_user_password_too_long(self):
+        validator = UserValidations(password="this_password_is_definitely_too_long")
+        self.assertRaises(ModelsAttributeError, validator.result)
+
+
+    def test_validate_user_password_invalid_characters(self):
+        validator = UserValidations(password="invalid#password")
+        self.assertRaises(ModelsAttributeError, validator.result)
+
+
+    def test_validate_user_image_ok(self):
+        image = SimpleUploadedFile("image.jpg", b"dummy data", content_type="image/jpeg")
+        validator = UserValidations(image=image)
+        try:
+            validator.result()
+        except ModelsAttributeError as e:
+            self.fail(f"result() raised ModelsAttributeError unexpectedly: {e}")
+
+
+    def test_validate_user_image_size_too_large(self):
+        image = SimpleUploadedFile("large_image.jpg", b"0" * (3*1024*1024 + 1), content_type="image/jpeg")
+        validator = UserValidations(image=image)
+        self.assertRaises(ModelsAttributeError, validator.result)
+
+
+    def test_validate_user_image_invalid_format(self):
+        image = SimpleUploadedFile("image.txt", b"dummy data", content_type="text/plain")
+        validator = UserValidations(image=image)
+        self.assertRaises(ModelsAttributeError, validator.result)
+
 
 
 class TestBoardValidations(unittest.TestCase):
@@ -118,3 +233,6 @@ class TestCardValidations(unittest.TestCase):
         validator = CardValidations(color="123456")
         self.assertRaises(ModelsAttributeError, validator.result)
 
+
+if __name__ == '__main__':
+    unittest.main()
