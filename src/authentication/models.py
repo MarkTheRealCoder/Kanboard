@@ -13,7 +13,6 @@ class User(models.Model):
     image = models.ImageField(null=True, blank=True)
     name = models.CharField(max_length=32)
     surname = models.CharField(max_length=32)
-
     last_login = models.DateTimeField()
     date_joined = models.DateTimeField()
 

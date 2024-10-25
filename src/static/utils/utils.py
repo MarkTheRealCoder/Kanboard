@@ -53,7 +53,7 @@ def get_board(board, board_id: int, owner: str = None) -> Board or None:
     :param owner: The board's owner.
     :return: The board object, None otherwise.
     """
-    keywords = { 'id': board_id }
+    keywords = {'id': board_id}
 
     if owner:
         keywords['owner'] = owner
@@ -80,7 +80,7 @@ def get_expired_cards_of_board(card, board_id: int) -> QuerySet[Card]:
     :param board_id: The board's ID.
     :return: The expired cards of the board.
     """
-    return get_cards_of_board(card, board_id).filter(expiration_date__lt=datetime.now())
+    return get_cards_of_board(card, board_id).exclude(expiration_date__isnull=True).filter(expiration_date__lt=datetime.now(), completion_date__isnull=True)
 
 
 def get_user(user, uuid: str = None, username: str = None) -> User or None:
@@ -194,3 +194,42 @@ def no_timezone(dt: datetime) -> datetime:
     """
     return dt.replace(tzinfo=None)
 
+def get_board_elements(column_clazz, card_clazz, assignee_clazz, user_clazz, board_id: int) -> list:
+    columns = column_clazz.objects.filter(board_id=board_id).order_by("index").all()
+
+    class TemplateAssignee:
+        def __init__(self, _assignee):
+            self.username = _assignee.username
+            self.image = _assignee.image
+
+    class TemplateCard:
+        def __init__(self, _card):
+            self.id = _card.id
+            self.title = _card.title
+            self.description = _card.description
+            self.color = _card.color
+            self.creation_date = _card.creation_date
+            self.expiration_date = _card.expiration_date if _card.expiration_date else None
+            self.completion_date = _card.completion_date
+            self.story_points = _card.story_points
+            if _card.expiration_date:
+                self.is_expired = not _card.completion_date and _card.expiration_date and no_timezone(_card.expiration_date) < no_timezone(datetime.now())
+            else:
+                self.is_expired = False
+
+            assignees = assignee_clazz.objects.filter(card_id=_card.id, board_id=board_id).all()
+            self.assignees = []
+            for assignee in assignees:
+                user = user_clazz.objects.filter(uuid=assignee.user_id.uuid).first()
+                self.assignees.append(TemplateAssignee(user))
+
+    class TemplateColumn:
+        def __init__(self, _column):
+            nonlocal board_id
+            self.id = _column.id
+            self.title = _column.title
+            self.color = _column.color
+            self.cards = [TemplateCard(card) for card in card_clazz.objects.filter(board_id=board_id, column_id=_column.id).order_by("index").all()]
+            self.card_count = len(self.cards)
+
+    return [TemplateColumn(column) for column in columns]

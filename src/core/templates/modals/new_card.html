@@ -1,0 +1,41 @@
+{% load static %}
+<div class="form-box" style="width: 100%; height: 100%; border-radius: 8px;">
+    <h1 class="form-title">Create a new card</h1>
+    <div class="input-container">
+        <img src="{% static 'assets/icons/tag.svg' %}" alt="Title Icon" class="input-icon">
+        <input type="text" class="input-field" id="card_title" name="card_title" placeholder="Card title" required>
+    </div>
+    <div class="input-container">
+        <img src="{% static 'assets/icons/description.svg' %}" alt="Description Icon" class="input-icon">
+        <textarea class="input-field" id="card_description" name="card_description" maxlength="256" rows="4" placeholder="Card description" required></textarea>
+    </div>
+    <div class="input-container">
+        <img src="{% static 'assets/icons/paint.svg' %}" alt="Color Icon" class="input-icon">
+        <input class="input-field" type="color" id="color" name="color" value="#808080">
+    </div>
+    <div class="input-container">
+        <select id="column" name="column">
+            {% for column in columns %}
+                <option value="{{ column.id }}">{{ column.title }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="input-container">
+        <input class="input-field" type="date" id="expiration_date" name="expiration_date">
+    </div>
+    <div class="input-container">
+        <input class="input-field" type="number" id="story_points" name="story_points" placeholder="Set card's Story Points" min=0 max=16>
+    </div>
+    <button type="submit" class="button submit-button" id="create">Create</button>
+    <script>
+        document.querySelector("#create").addEventListener("click", () => {
+            triggerMicro("{% url 'core:new_card' board_id=board_id %}", ['card_title', 'card_description', 'color', 'column', 'expiration_date', 'story_points'], displayMessage, displayMessage);
+            hideModal();
+        });
+        var today = new Date();
+
+        today = today.toISOString().split('T')[0]
+
+        document.getElementById('expiration_date').min = today;
+    </script>
+</div>

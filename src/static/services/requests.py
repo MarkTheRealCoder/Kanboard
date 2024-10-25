@@ -6,24 +6,23 @@ from django.urls import path, resolve
 
 class RequestHandler:
     """
-    RequestHandler class
-    This class is a singleton class that handles requests before they are sent to the views.
+    This class is a singleton class that handles requests
+    before they are sent to the views.
+
     This class is responsible for:
-    - Validating requests
-    - Handling errors
-    - Sending the responses to the client
+        - Validating requests
+        - Handling errors
+        - Sending the responses to the client
 
     How to use:
-    - use the bind decorator to bind a view to a specific path
-    - use the forward method inside the urls.py file to dynamically forward requests to the appropriate view
-
-    Attributes:
-        ___views: dict[str, tuple[Callable, dict[str: Any]]] - A dictionary mapping paths to views and their associated DBRequestBuilders.
+        - use the bind decorator to bind a view to a specific path
+        - use the forward method inside the urls.py file to
+          dynamically forward requests to the appropriate view
 
     Methods:
-        bind: Binds a view to a specific path.
-        forward: Forwards a request to the appropriate view.
-        match_path: Matches the request path to the bound view.
+        - bind: Binds a view to a specific path.
+        - forward: Forwards a request to the appropriate view.
+        - match_path: Matches the request path to the bound view.
     """
 
     def __init__(self):
@@ -61,7 +60,7 @@ class RequestHandler:
         view, options = None, None
         try:
             view, options = self.___match_path(request.path)
-        except Exception as e:
+        except Exception:
             return HttpResponse("404 Not Found")
 
         uuid = request.session.get('uuid', None)
@@ -70,8 +69,6 @@ class RequestHandler:
             return HttpResponse("401 Unauthorized")
         if options['request'] is not None and request.method != options['request']:
             return HttpResponse("405 Method Not Allowed")
-
-
 
         return view(request, **kwargs)
 
@@ -107,7 +104,7 @@ class JsonResponses:
     ERROR = 500
 
     @staticmethod
-    def response(status: int, message: str):
+    def response(status: int, message: str) -> JsonResponse:
         """
         Generates a JSON response.
 
@@ -115,4 +112,11 @@ class JsonResponses:
         :param message: str - The message to include in the response.
         :return: JsonResponse - The JSON response.
         """
+        if status not in { JsonResponses.SUCCESS, JsonResponses.ERROR, JsonResponses.WARNING }:
+            raise ValueError("Invalid status code.")
+
+        if not message:
+            raise ValueError("Message cannot be empty.")
+
         return JsonResponse({'status': status, 'message': message})
+

@@ -29,37 +29,32 @@
         <section class="burndown first-section">
             <table>
                 <tr>
-                    <th id="transparent"></th>
-                    <th>Number of:</th>
+                    <th>Column</th>
+                    <th>Active Cards</th>
+                    <th>Expired Cards</th>
+                    <th>Completed Cards</th>
+                    <th>Cards</th>
+                    <th>Story points used</th>
                 </tr>
+                {% for column in columns %}
+                    <tr>
+                        <td style="border-color: antiquewhite;">{{ column.name }}</td>
+                        <td style="border-color: aqua;">{{ column.active_cards }}</td>
+                        <td style="border-color: red;">{{ column.expired_cards }}</td>
+                        <td style="border-color: green;">{{ column.completed_cards }}</td>
+                        <td style="border-color: purple;">{{ column.total_cards }}</td>
+                        <td style="border-color: antiquewhite;">{{ column.story_points }}</td>
+                    </tr>
+                {% endfor %}
                 <tr>
-                    <td>Cards</td>
-                    <td>{{ total_cards }}</td>
-                </tr>
-                <tr>
-                    <td>Expired Cards</td>
-                    <td>{{ expired_cards }}</td>
-                </tr>
-                <tr>
-                    <td>Story points used</td>
-                    <td>{{ total_story_points }}</td>
-                </tr>
+                    <td style="border-color: antiquewhite;">Total</td>
+                    <td style="border-color: aqua;">{{ total_active_cards }}</td>
+                    <td style="border-color: red;">{{ total_expired_cards }}</td>
+                    <td style="border-color: green;">{{ total_completed_cards }}</td>
+                    <td style="border-color: purple;">{{ total_cards }}</td>
+                    <td style="border-color: antiquewhite;">{{ total_story_points }}</td>
             </table>
-            {% if total_cards %}
-                <table>
-                    <tr>
-                        <th>Column name:</th>
-                        <th>Number of Cards:</th>
-                    </tr>
-                    {% for column in cards_per_column %}
-                    <tr>
-                        <td>{{ column.name }}</td>
-                        <td>{{ column.card_count }}</td>
-                    </tr>
-                    {% endfor %}
-                </table>
-                <img src="{% url 'core:burndown_image' board_id=board.id %}" alt="">
-            {% endif %}
+            <img src="{% url 'core:burndown_image' board_id=board.id %}" alt="">
         </section>
     </div>
 </body>

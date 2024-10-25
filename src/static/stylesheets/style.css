@@ -1,3 +1,10 @@
+:root {
+    --main-modal-index: 10;
+    --column-modal-index: 9;
+    --side-menu-index: 8;
+    --service-message-index: 11;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -32,6 +39,11 @@ body {
     animation: zoomIn 0.3s ease-out;
 }
 
+div#modal > div.form-box {
+    min-height: 500px;
+    height: fit-content;
+}
+
 .form {
     text-align: left;
     display: block;
@@ -42,6 +54,17 @@ body {
 .form-title {
     font-size: 50px;
     margin-bottom: 1.2em;
+}
+
+.form-box > .form-description {
+    height: fit-content;
+    width: 100%;
+    text-align: center;
+    padding: 10px;
+    border-radius: 8px;
+    background-color: #333;
+    color: #ffffff;
+    margin-bottom: 0.5em;
 }
 
 .form-box div {
@@ -62,22 +85,33 @@ body {
     margin-top: 2em;
 }
 
+.form-footer a {
+    color: #5ed399;
+}
+
+.form-footer a:hover {
+    color: #1ab565;
+}
+
+h1.app-title {
+    font-family: 'Bigshot One', cursive;
+    color: #ff6f61;
+}
+
 .input-container {
     position: relative;
     margin-bottom: 20px;
 }
 
-.input-container > .input-label {
-
-}
-
 .input-container > select {
     width: 100%;
+    height: fit-content;
     border: 1px solid #666;
     background-color: #333;
     color: var(--white);
     border-radius: 5px;
     font-size: 18px;
+    padding: 5px 10px;
 }
 
 .input-icon {
@@ -123,6 +157,46 @@ textarea.input-field {
 .input-field:is([type="color"]):hover {
     cursor: pointer;
 }
+
+label:has(+ .input-field), .input-field + label{
+    font-size: 16px;
+    color: white;
+    margin: 5px;
+}
+
+.input-container:has(.input-field + label) {
+    display: flex;
+    justify-content: start;
+    align-items: center;
+}
+
+.input-container:has(label + .input-field) {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: start;
+}
+
+.flex-from-left > .input-field[type="checkbox"] {
+    width: fit-content;
+    margin: 5px 0.1em 5px 0;
+}
+
+.flex-from-left > .input-field[type="checkbox"] + label {
+    width: fit-content;
+    text-align: left;
+}
+
+.assignees {
+    display: flex;
+    justify-content: start;
+    align-items: center;
+    flex-wrap: wrap;
+    background-color: #333;
+    border-radius: 8px;
+    padding: 5px;
+}
+
 
 .submit-button {
     width: 100%;
@@ -371,7 +445,7 @@ nav button.blue:hover {
     background-color: #315cb1;
 }
 
-.dashboard {
+.dashboard, .dashboard > #column-container {
     display: flex;
     justify-content: flex-start;
     align-items: center;
@@ -379,17 +453,53 @@ nav button.blue:hover {
     width: 100%;
 }
 
+div.dashboard, .dashboard > #column-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    padding: 0 1em;
+}
+
+hr#dnd-placeholder {
+    background-color: #4d8bff;
+    border: none;
+    display: block;
+}
+
+hr#dnd-placeholder.placeholder-column {
+    height: 100%;
+    width: 20px;
+    margin: 0 10px;
+}
+
+hr#dnd-placeholder.placeholder-card {
+    height: 20px;
+    width: 100%;
+    margin: 10px 0;
+}
+
 .board-silhouette {
+    position: relative;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 90%;
     min-width: 350px;
+    width: 350px;
     border: 1px solid grey;
     border-radius: 25px;
     background-color: inherit;
     color: #fff;
     margin-left: 3em;
+    margin-right: 1.5em;
+}
+
+.dashboard > .board-silhouette + .board-silhouette {
+    margin: 0 1.5em;
+}
+
+.dashboard > #dnd-placeholder + .board-silhouette {
+    margin: 0 1.5em;
 }
 
 .board-silhouette:not(.column-silhouette) {
@@ -403,6 +513,9 @@ nav button.blue:hover {
 
 .board-silhouette:hover {
     cursor: pointer;
+}
+.board-silhouette.column-silhouette[draggable="true"]:hover {
+    cursor: grab;
 }
 
 .board-silhouette:not(:has(.cross)):not(.column-silhouette):hover {
@@ -452,25 +565,106 @@ nav button.blue:hover {
     cursor: inherit;
 }
 
+.overflow-container {
+    overflow: auto;
+    padding-bottom: 1em;
+    height: 100%;
+    width: 100%;
+}
+
+.card-container {
+    overflow: hidden;
+    height: calc(100% - 52px);
+    width: 100%;
+}
+
+.board-silhouette:not(:is(.column-silhouette)) .deleting-button {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    padding: 5px;
+    border-radius: 50%;
+}
+
+.board-silhouette .deleting-button {
+    background-color: #ff4d4d;
+    color: #fff;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    padding: 5px;
+}
+
+.board-silhouette:not(:is(.column-silhouette)) .deleting-button {
+    display: none;
+    justify-content: center;
+    align-items: center;
+}
+
+.board-silhouette:not(:is(.column-silhouette)):hover .deleting-button {
+    display: flex;
+}
+
+.deleting-button:hover {
+    background-color: var(--square-red);
+}
+
+.column-silhouette[draggable="true"]:hover > .deleting-button,
+.column-silhouette[draggable="true"] > .deleting-button:hover{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    top: -1px;
+    left: calc(100% + 1px);
+    z-index: 2;
+    border-top-right-radius: 50%;
+    border-bottom-right-radius: 50%;
+    border: 2px solid white;
+    border-left: none;
+}
+
+.column-silhouette > .deleting-button {
+    position: absolute;
+    display: none;
+}
+
+.deleting-button > img {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    padding: 0;
+}
+
+.warning-advisory {
+    padding: 10px;
+    border-radius: 8px;
+    background-color: var(--dark-gray);
+    border: 1px solid var(--gray);
+    color: #eaeee9;
+    text-align: center;
+    line-height: 2em;
+}
+
+.warning-advisory > b {
+    color: white;
+    padding: 3px;
+    border: 1px solid #eeea39;
+}
+
 .stabilize {
     flex-grow: 1;
 }
 
 .column-silhouette {
     display: block;
-    overflow: hidden;
     border-radius: 0;
 }
 
-.overflow-container {
-    overflow: auto;
-    height: 100%;
-    padding-bottom: 3.5em;
-}
-
 .card-silhouette {
-    display: block;
-    height: 200px;
+    --height: 200px;
+    display: flex;
+    flex-direction: column;
+    height: var(--height);
     width: 90%;
     border: 1px solid grey;
     border-radius: 15px;
@@ -483,6 +677,57 @@ nav button.blue:hover {
     padding: .5em;
 }
 
+.card-silhouette > p:not(:has(b)){
+    max-height: 150px;
+    padding: 5px;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    overflow: auto;
+}
+
+#column-modal-wrapper {
+    position: fixed;
+    display: none;
+    z-index: var(--column-modal-index);
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    padding: 5%;
+    backdrop-filter: blur(5px);
+}
+
+#column-modal-panel {
+    width: 0px;
+    transition: width .5s ease-in-out;
+}
+
+.column-silhouette + #column-modal-panel {
+    position: relative;
+    background-color: #1e1e1e;
+    border-top-right-radius: 16px;
+    border-bottom-right-radius: 16px;
+    width: 500px;
+    margin-right: auto;
+    height: 90%;
+    margin-left: 0;
+    z-index: var(--column-modal-index);
+}
+
+#column-modal-wrapper > .column-silhouette {
+    height: 90%;
+    position: relative;
+    margin-left: auto;
+    margin-right: 0;
+    z-index: var(--column-modal-index);
+}
+
+#column-modal-wrapper:has(.column-silhouette) {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
 .sticky-title {
     position: sticky;
     top: 0;
@@ -492,6 +737,7 @@ nav button.blue:hover {
     justify-content: space-between;
     align-items: center;
     padding-right: .5em;
+    height: 50px;
 }
 
 .sticky-title p {
@@ -510,6 +756,22 @@ nav button.blue:hover {
     height: 38px;
 }
 
+.sticky-title > h2, .non-sticky-title > h4 {
+    min-width: 50%;
+    width: fit-content;
+    max-width: 60%;
+    height: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.column-silhouette > .sticky-title > h2:hover, .column-silhouette[draggable="true"] .non-sticky-title > h4:hover {
+    text-decoration: underline;
+    color: #4d8bff;
+    cursor: pointer;
+}
+
 .infos-container:has(#open-close-menu) {
     border-right: 1px solid var(--gray);
 }
@@ -521,7 +783,7 @@ nav button.blue:hover {
     position: absolute;
     left: 0;
     top: 0;
-    z-index: 100;
+    z-index: var(--side-menu-index);
     translate: -100%;
     transition: translate .5s ease-in-out;
 }
@@ -533,7 +795,7 @@ nav button.blue:hover {
     width: var(--width);
     height: var(--height);
     top: calc(50% - var(--height) / 2);
-    right: calc(-1 * (var(--width) - 1px));
+    right: calc(-1 * (var(--width)));
     background-color: var(--dark-gray);
     border-bottom-right-radius: 8px;
     border-top-right-radius: 8px;
@@ -560,10 +822,10 @@ nav button.blue:hover {
     height: 20px;
 }
 
-.sticky-title:hover,
-.non-sticky-title:hover {
+.column-silhouette[draggable="true"] > .sticky-title:hover,
+.card-silhouette[draggable="true"] > .non-sticky-title:hover {
     background-color: rgba(255, 255, 255, 0.1);
-    cursor: pointer;
+    cursor: grab;
 }
 
 .burndown {
@@ -613,7 +875,11 @@ td {
     text-align: left;
 }
 
-td:nth-child(2) {
+td:nth-child(even) {
+    background-color: #3b3b3b;
+}
+
+td {
     text-align: center;
 }
 
@@ -631,7 +897,7 @@ tr {
     width: calc(100% / 3);
     height: fit-content;
     position: absolute;
-    z-index: 100;
+    z-index: var(--service-message-index);
     top: 10px;
     left: calc(50% - (100% / 3) / 2);
     padding: 1em;
@@ -657,7 +923,7 @@ div#modal {
     height: max(500px, fit-content);
     min-height: 500px;
     position: relative;
-    z-index: 100;
+    z-index: var(--main-modal-index);
     background-color: var(--darker-gray);
     border-radius: 16px;
     padding: 8px;
@@ -674,7 +940,7 @@ div#modal-wrapper {
     top: 0;
     left: 0;
     background-color: transparent;
-    z-index: 99;
+    z-index: var(--main-modal-index);
     overflow: hidden;
     display: none;
 }
@@ -695,7 +961,9 @@ div#modal-wrapper {
     background-color: #c9302c;
 }
 
-#confirm, #discard {
+#confirm, #discard,
+#confirm-dangerous-action, #abort-dangerous-action,
+#confirm-card, #delete-card {
     width: 48%;
     border-radius: 8px;
     border: none;
@@ -760,8 +1028,121 @@ div#modal-wrapper {
     width: fit-content;
 }
 
+#profile-button img {
+    border-radius: 50%;
+}
+
 button img {
     width: 30px;
     height: 30px;
     margin-right: .7em;
+}
+
+.card-bottom {
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+    width: 100%;
+    height: 40px;
+}
+
+.card-bottom > .card-assignees {
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+    width: 50%;
+    overflow: hidden;
+    border-right: 1px solid var(--gray);
+    height: 100%;
+}
+
+.card-bottom > .card-assignees > img {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin: 0 auto;
+}
+
+.card-bottom > p {
+    height: fit-content;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 5px;
+    width: 50%;
+}
+
+.card-bottom > p > b {
+    color: var(--square-cyan);
+    margin: 0 4px;
+}
+
+.flex-from-left {
+    justify-content: flex-start !important;
+}
+
+.flex-from-left > .input-container {
+    margin: 0 .5em 0 1em;
+}
+
+#mark-completed {
+    margin-top: .5em;
+}
+
+.users-container {
+    display: flex;
+    justify-content: space-evenly; /* Space between sections */
+    align-items: center; /* Align top */
+    flex-wrap: wrap;
+    border-radius: 8px;
+    height: 300px; /* Total container height limit */
+    overflow: hidden; /* Avoid double scroll on the main container */
+}
+
+.users-container > div {
+    display: flex;
+    flex-direction: column;
+    width: 49%; /* Allow two columns with spacing */
+    height: 100%; /* Match the height of the parent */
+    min-height: 100%; /* Match the height of the parent */
+    background-color: #0f0f18;
+    border-radius: 8px;
+}
+
+#assigned-users, #kanboard-users {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: calc(100% - 1.5em);
+    max-height: 300px;
+    overflow-y: auto;
+    margin: 10px 0;
+}
+
+#assigned-users > div.user-field, #kanboard-users > div.user-field {
+    margin: 0.2em auto;
+    width: 90%;
+    height: 30px;
+    min-height: 30px;
+    background-color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+#assigned-users > div.user-field:hover {
+    background-color: #861224;
+}
+#kanboard-users > div.user-field:hover {
+    background-color: #1ab565;
+}
+
+
+.users-container > div > h4 {
+    width: 100%;
+    height: 1.5em;
+    border-radius: 50%;
+    margin: 0 auto;
 }

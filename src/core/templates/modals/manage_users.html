@@ -1,0 +1,46 @@
+{% load static %}
+<div class="form-box" style="width: 100%; height: 100%; border-radius: 8px;">
+    <h1 class="form-title">Manage users</h1>
+    <p class="form-description">Click on a user to assign or unassign them from the board</p>
+    <div class="users-container">
+        <div>
+            <h4 class="users-title">Assigned Users</h4>
+            <div id="assigned-users">
+                {% for assignee in assignees %}
+                    <div class="user-field" id="user_{{ assignee.username }}">{{ assignee.username }}</div>
+                {% endfor %}
+            </div>
+        </div>
+        <div>
+            <h4 class="users-title">Kanboard Users</h4>
+            <div id="kanboard-users">
+                {% for user in users %}
+                    <div class="user-field" id="user_{{ user.username }}">{{ user.username }}</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <button type="submit" class="button submit-button" id="create">Confirm</button>
+    <script>
+        document.querySelector("#create").addEventListener("click", () => {
+            const users = [];
+            for (const user of $('#assigned-users').children('.user-field')) {
+                users.push(`${user.id}`);
+            }
+            triggerMicro("{% url 'core:manage_assignees' board_id=board_id %}", users, displayMessage, displayMessage);
+            hideModal();
+            setTimeout(() => {
+                document.dispatchEvent(new CustomEvent('sync-columns'));
+            }, 1000);
+        });
+
+        document.querySelector('.user-field').addEventListener('click', (event) => {
+            const target = $(event.target);
+            let parent = $(event.target).parents("#assigned-users");
+            if (parent.length > 0) parent = $('#kanboard-users')
+            else parent = $('#assigned-users')
+            $(parent).append($(target));
+        });
+
+    </script>
+</div>

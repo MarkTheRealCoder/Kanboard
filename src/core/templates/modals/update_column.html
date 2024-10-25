@@ -1,0 +1,26 @@
+{% load static %}
+<div class="form-box" style="width: 100%; height: 100%; border-radius: 8px;">
+    <div class="input-container">
+        <img src="{% static 'assets/icons/description.svg' %}" alt="Description Icon" class="input-icon">
+        <textarea class="input-field" id="column_description" name="column_description" maxlength="256" rows="4" required>{{ column.description }}</textarea>
+    </div>
+    <div class="input-container">
+        <img src="{% static 'assets/icons/tag.svg' %}" alt="Title Icon" class="input-icon">
+        <input type="text" class="input-field" id="column_title" name="column_title" value="{{ column.title }}" required>
+    </div>
+    <div class="input-container">
+        <img src="{% static 'assets/icons/paint.svg' %}" alt="Color Icon" class="input-icon">
+        <input class="input-field" type="color" id="column_color" name="column_color" value="{{ column.color }}">
+    </div>
+    <button type="submit" class="button submit-button" id="confirm-column">Confirm</button>
+    <script>
+        document.querySelector("#confirm-column").addEventListener("click", () => {
+                    triggerMicro("{% url 'core:update_column' board_id=board_id column_id=column_id %}", ['column_color', 'column_title', 'column_description'], (data) => {
+                        displayMessage(data);
+                        document.dispatchEvent(new CustomEvent('sync-columns'));
+                    }, displayMessage);
+
+        hideModal('#column-modal-wrapper');
+        });
+    </script>
+</div>

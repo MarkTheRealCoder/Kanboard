@@ -28,15 +28,15 @@ EXISTENCE = ModelsAttributeError.EXISTENCE
 
 class UserValidations:
     def __init__(self, klass = None, **kwargs):
-        self.klass = klass
-        self.username = kwargs.get('username', None)
-        self.email = kwargs.get('email', None)
-        self.password = kwargs.get('password', None)
-        self.image = kwargs.get('image', None)
-        self.name = kwargs.get('name', None)
-        self.surname = kwargs.get('surname', None)
+        self.___klass = klass
+        self.___username = kwargs.get('username', None)
+        self.___email = kwargs.get('email', None)
+        self.___password = kwargs.get('password', None)
+        self.___image = kwargs.get('image', None)
+        self.___name = kwargs.get('name', None)
+        self.___surname = kwargs.get('surname', None)
 
-    def generate_uuid(self):
+    def generate_uuid(self) -> str:
         import uuid
         return uuid.uuid4().hex
 
@@ -50,57 +50,57 @@ class UserValidations:
         return self
 
     def ___validate_username(self):
-        if self.username is None:
+        if self.___username is None:
             return
-        if re.match(r'^[a-zA-Z0-9_]{1,32}$', self.username) is None:
+        if re.match(r'^[a-zA-Z0-9_]{1,32}$', self.___username) is None:
             raise ModelsAttributeError("Username must contain only letters, numbers and underscores.\n"
                                        "Username must not exceed 32 characters.")
-        if self.klass and self.klass.objects.filter(username=self.username).exists():
+        if self.___klass and self.___klass.objects.filter(username=self.___username).exists():
             raise ModelsAttributeError("Username already exists", EXISTENCE)
 
     def ___validate_email(self):
-        if self.email is None:
+        if self.___email is None:
             return
-        if re.match(r'^[a-zA-Z0-9_.]+@[a-zA-Z0-9.]+\.[a-zA-Z0-9]+$', self.email) is None:
+        if re.match(r'^[a-zA-Z0-9_.]+@[a-zA-Z0-9.]+\.[a-zA-Z0-9]+$', self.___email) is None:
             raise ModelsAttributeError("Email must be in the format: youremail@example.com")
-        if self.klass and self.klass.objects.filter(email=self.email).exists():
+        if self.___klass and self.___klass.objects.filter(email=self.___email).exists():
             raise ModelsAttributeError("Email already exists", EXISTENCE)
 
     def ___validate_password(self):
-        if self.password is None:
+        if self.___password is None:
             return
-        if re.match(r'^[a-zA-Z0-9_%$&@!?]{8,32}$', self.password) is None:
+        if re.match(r'^[a-zA-Z0-9_%$&@!?]{8,32}$', self.___password) is None:
             raise ModelsAttributeError("Password must contain only letters, numbers and/or special characters: '_', '!', '@', '$', '%', '&', '?'.\n"
                                        "Password must be at least 8 characters long and must not exceed 32 characters.")
 
     def ___validate_image(self):
-        if self.image is None:
+        if self.___image is None:
             return
-        if not re.match(r'^image/(jpeg|png|jpg)$', self.image.content_type):
+        if not re.match(r'^image/(jpeg|png|jpg)$', self.___image.content_type):
             raise ModelsAttributeError("Image must be in the format: jpeg, png or jpg")
-        if self.image.size > 3*1024*1024:
+        if self.___image.size > 3*1024*1024:
             raise ModelsAttributeError("Image size must be less than 3MB")
 
     def ___validate_name(self):
-        if self.name is None:
+        if self.___name is None:
             return
-        if re.match(r'^[a-zA-Z]{1,32}$', self.name) is None:
+        if re.match(r'^[a-zA-Z]{1,32}$', self.___name) is None:
             raise ModelsAttributeError("Name must contain only letters.\n"
                                        "Name must not exceed 32 characters.")
 
     def ___validate_surname(self):
-        if self.surname is None:
+        if self.___surname is None:
             return
-        if re.match(r'^[a-zA-Z ]{1,32}$', self.surname) is None:
+        if re.match(r'^[a-zA-Z ]{1,32}$', self.___surname) is None:
             raise ModelsAttributeError("Surname must contain only letters.\n"
                                        "Surname must not exceed 32 characters.")
 
 
 class BoardValidations:
     def __init__(self, **kwargs):
-        self.title = kwargs.get('title', None)
-        self.description = kwargs.get('description', None)
-        self.image = kwargs.get('image', None)
+        self.___title = kwargs.get('board_title', None)
+        self.___description = kwargs.get('board_description', None)
+        self.___image = kwargs.get('image', None)
 
     def result(self):
         self.___validate_title()
@@ -108,34 +108,36 @@ class BoardValidations:
         self.___validate_image()
 
     def ___validate_title(self):
-        if self.title is None:
+        if self.___title is None:
             return
-        if not re.match(r'^[a-zA-Z0-9 ]{1,16}$', self.title):
+        if not re.match(r'^[a-zA-Z0-9 ]{1,20}$', self.___title):
             raise ModelsAttributeError(
-                "Title must be 16 characters or less and must contain only letters, numbers, and the special character: '_'.")
+                "Title must be 16 characters or less and must contain only letters, numbers, and the special "
+                "character: '_'.")
 
     def ___validate_description(self):
-        if self.description is None:
+        if self.___description is None:
             return
-        if re.match(r'^[a-zA-Z0-9 .,;:!?-_()\n]{1,256}$', self.description) is None:
+        if re.match(r"""^[a-zA-Z0-9 '".,;:!?-_()\n]{0,256}$""", self.___description) is None:
             raise ModelsAttributeError(
                 "Description contains invalid characters or exceeds 256 characters. Accepted characters are "
-                "letters, numbers, spaces, newlines, and the following special characters: '.', ',', ';', ':', '!', '?', '-', '', '(', ')'.")
+                "letters, numbers, spaces, newlines, and the following special characters: '.', ',', ';', ':', '!', "
+                "'?', '-', '', '(', ')'.")
 
     def ___validate_image(self):
-        if self.image is None:
+        if self.___image is None:
             return
-        if self.image.size > 3 * 1024 * 1024:
+        if self.___image.size > 3 * 1024 * 1024:
             raise ModelsAttributeError("Image size must be less than 3MB.")
-        if not re.match(r'^image/(jpeg|png|jpg)$', self.image.content_type):
+        if not re.match(r'^image/(jpeg|png|jpg)$', self.___image.content_type):
             raise ModelsAttributeError("Image must be in the format: jpeg, png or jpg.")
 
 
 class ColumnValidations:
     def __init__(self, **kwargs):
-        self.title = kwargs.get('title', None)
-        self.description = kwargs.get('description', None)
-        self.color = kwargs.get('color', None)
+        self.___title = kwargs.get('column_title', None) or kwargs.get('title', None)
+        self.___description = kwargs.get('column_description', None) or kwargs.get('description', None)
+        self.___color = kwargs.get('color', None)
 
     def result(self):
         self.___validate_title()
@@ -143,32 +145,35 @@ class ColumnValidations:
         self.___validate_color()
 
     def ___validate_title(self):
-        if self.title is None:
+        if self.___title is None:
             return
-        if not re.match(r'^[a-zA-Z0-9 ]{1,20}$', self.title):
+        if not re.match(r'^[a-zA-Z0-9 ]{1,20}$', self.___title):
             raise ModelsAttributeError(
-                "Title must be 20 characters or less and must contain only letters, numbers, and the special character: ''.")
+                "Title must be 20 characters or less and must contain only letters, numbers, and the special "
+                "character: ''.")
 
     def ___validate_description(self):
-        if self.description is None:
+        if self.___description is None:
             return
-        if re.match(r'^[a-zA-Z0-9 .,;:!?-_()\n]{1,256}$', self.description) is None:
+        if re.match(r"""^[a-zA-Z0-9 '".,;:!?-_()\n]{0,256}$""", self.___description) is None:
             raise ModelsAttributeError(
                 "Description contains invalid characters or exceeds 256 characters. Accepted characters are "
-                "letters, numbers, spaces, newlines, and the following special characters: '.', ',', ';', ':', '!', '?', '-', '', '(', ')'.")
+                "letters, numbers, spaces, newlines, and the following special characters: '.', ',', ';', ':', '!', "
+                "'?', '-', '', '(', ')'.")
 
     def ___validate_color(self):
-        if self.color is None:
+        if self.___color is None:
             return
-        if not re.match(r'^#[0-9A-Fa-f]{6}$', self.color):
+        if not re.match(r'^#[0-9A-Fa-f]{6}$', self.___color):
             raise ModelsAttributeError("Color must be in the format #RRGGBB (hexadecimal).")
 
 
 class CardValidations:
     def __init__(self, **kwargs):
-        self.title = kwargs.get('title', None)
-        self.description = kwargs.get('description', None)
-        self.color = kwargs.get('color', None)
+        self.___title = kwargs.get('card_title', None) or kwargs.get('title', None)
+        self.___description = kwargs.get('card_description', None) or kwargs.get('description', None)
+        self.___story_points = kwargs.get('story_points', None)
+        self.___color = kwargs.get('color', None)
 
     def result(self):
         self.___validate_title()
@@ -176,23 +181,31 @@ class CardValidations:
         self.___validate_color()
 
     def ___validate_title(self):
-        if self.title is None:
+        if self.___title is None:
             return
-        if not re.match(r'^[a-zA-Z0-9 ]{1,20}$', self.title):
+        if not re.match(r'^[a-zA-Z0-9 ]{1,20}$', self.___title):
             raise ModelsAttributeError(
-                "Title must be 20 characters or less and must contain only letters, numbers, and the special character: ''.")
+                "Title must be 20 characters or less and must contain only letters, numbers, and the special "
+                "character: ''.")
 
     def ___validate_description(self):
-        if self.description is None:
+        if self.___description is None:
             return
-        if re.match(r'^[a-zA-Z0-9 .,;:!?-_()\n]{1,256}$', self.description) is None:
+        if re.match(r"""^[a-zA-Z0-9 '".,;:!?\-_()\n]{0,256}$""", self.___description) is None:
             raise ModelsAttributeError(
                 "Description contains invalid characters or exceeds 256 characters. Accepted characters are "
-                "letters, numbers, spaces, newlines, and the following special characters: '.', ',', ';', ':', '!', '?', '-', '', '(', ')'.")
+                "letters, numbers, spaces, newlines, and the following special characters: '.', ',', ';', ':', '!', "
+                "'?', '-', '', '(', ')'.")
 
     def ___validate_color(self):
-        if self.color is None:
+        if self.___color is None:
             return
-        if not re.match(r'^#[0-9A-Fa-f]{6}$', self.color):
+        if not re.match(r'^#[0-9A-Fa-f]{6}$', self.___color):
             raise ModelsAttributeError("Color must be in the format #RRGGBB (hexadecimal).")
+
+    def ___validate_story_points(self):
+        if self.___story_points is None:
+            return
+        if self.___story_points < 0 or self.___story_points > 16:
+            raise ModelsAttributeError("Story points must be a number between 0 and 999.")
 

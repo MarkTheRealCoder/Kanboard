@@ -1,0 +1,23 @@
+{% load static %}
+<div class="form-box" style="width: 100%; height: 100%; border-radius: 8px;">
+    <h1 class="form-title">Are you sure?</h1>
+    <p class="warning-advisory">Clicking confirm will delete permanently<br><b>{{ title }}</b> {{ type }}.</p>
+    <div>
+        <button type="submit" class="button discard-button" id="confirm-dangerous-action">Confirm</button>
+        <button type="submit" class="button submit-button" id="abort-dangerous-action">Abort</button>
+    </div>
+    <script>
+        document.querySelector("#confirm-dangerous-action").addEventListener("click", () => {
+            triggerMicro('{{ view }}', [], displayMessage, displayMessage);
+        {% if type != "Board" %}
+            setTimeout(() => {
+                document.dispatchEvent(new CustomEvent('sync-columns'));
+            }, 1000);
+        {% endif %}
+            hideModal();
+        });
+        document.querySelector("#abort-dangerous-action").addEventListener("click", () => {
+            hideModal();
+        });
+    </script>
+</div>

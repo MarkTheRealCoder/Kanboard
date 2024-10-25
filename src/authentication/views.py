@@ -65,6 +65,8 @@ def login_submission(request):
     if not user:
         return response_error(f"{field.title()} or password are incorrect.")
 
+    user.last_login = no_timezone(datetime.now())
+
     request.session['uuid'] = user.uuid.hex
     request.session.set_expiry(0)
 

@@ -1,506 +1,26 @@
+import json
 from datetime import datetime
 from io import BytesIO
+from uuid import uuid4
 
-from django.http import HttpResponse, JsonResponse
+from django.db.models import F, Sum
+from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.views.decorators.csrf import requires_csrf_token
 
 from authentication.models import User
-from core.models import Board, Column, Card, Guest
-from static.services import RequestHandler
+from core.models import Board, Column, Card, Guest, Assignee
+from static.services import RequestHandler, ColumnValidations, BoardValidations, ModelsAttributeError, CardValidations
 from static.utils.utils import get_user_from, response_error, get_board, check_board_invalid, \
     check_user_not_owner_or_guest, no_timezone, get_cards_of_board, get_expired_cards_of_board, get_user, \
-    check_user_not_owner, response_success, get_guest, get_columns, get_boards_owned, check_user_not_guest
+    check_user_not_owner, response_success, get_guest, get_columns, get_boards_owned, check_user_not_guest, \
+    get_board_elements
+
+
 
 # Create your views here.
 HANDLER = RequestHandler()
-
-@HANDLER.bind("board", "board/<int:board_id>", request="GET", session=True)
-@requires_csrf_token
-def board_view(request, board_id):
-    """
-    Renders the board page with the board details and columns.
-    Requires the method to be GET and the user to be authenticated.
-
-    :param request: HttpRequest - The HTTP request object.
-    :param board_id: int - The ID of the board to display.
-    :return: HttpResponse - The rendered HTML page with the board details.
-    """
-    uuid = get_user_from(request)
-    board = get_board(Board, board_id)
-
-    if check_board_invalid(board):
-        return response_error("Board not found.")
-
-    if check_user_not_owner_or_guest(Board, Guest, board_id, uuid):
-        return response_error("You do not have access to this board.")
-
-    columns = get_columns(Column, board_id)
-
-    board_info = {
-        'id': board.id,
-        'name': board.name,
-        'description': board.description,
-        'image': board.image,
-        'creation_date': board.creation_date
-    }
-
-    class TemplateCard:
-        def __init__(self, _card):
-            self.id = _card.id
-            self.title = _card.title
-            self.description = _card.description
-            self.color = _card.color
-            self.creation_date = _card.creation_date
-            self.expiration_date = _card.expiration_date if _card.expiration_date else 'Never'
-            self.story_points = _card.story_points
-            if _card.expiration_date:
-                self.is_expired = no_timezone(_card.expiration_date) < no_timezone(datetime.now())
-            else:
-                self.is_expired = False
-
-    class TemplateColumn:
-        def __init__(self, _column):
-            self.id = _column.id
-            self.title = _column.title
-            self.color = _column.color
-            self.cards = [TemplateCard(card) for card in Card.objects.filter(column_id=_column.id).all()]
-            self.card_count = len(self.cards)
-
-    columns = [TemplateColumn(column) for column in columns]
-
-    return render(request, "boards.html", {
-        "board": board_info,
-        "columns": columns
-    })
-
-
-@HANDLER.bind("columns", "columns/<int:board_id>", request="POST", session=True)
-@requires_csrf_token
-def columns_view(request, board_id):
-    """
-    Renders the columns of the board.
-    Requires the method to be POST and the user to be authenticated.
-
-    :param request: HttpRequest - The HTTP request object.
-    :param board_id: int - The ID of the board to display.
-    :return: JsonResponse - The JSON response with the columns of the board.
-    """
-    uuid = get_user_from(request)
-    board = get_board(Board, board_id)
-
-    if check_board_invalid(board):
-        return response_error("Board not found.")
-
-    if check_user_not_owner_or_guest(Board, Guest, board_id, uuid):
-        return response_error("You do not have access to this board.")
-
-    columns = get_columns(Column, board_id)
-    columns_info = [column for column in columns]
-
-    return JsonResponse(columns_info, safe=False)
-
-#
-# data = (
-#     DBRequestBuilder("column_details", "No column found with this ID!")
-#     .select("id", "title", "description", "color", "index")
-#     .from_table("columns")
-#     .where("id = PARAM(column_id)"),
-#
-#     DBRequestBuilder("column_cards", "No cards found for this column!")
-#     .select("id", "title", "description", "expiration_date")
-#     .from_table("cards")
-#     .where("column_id = PARAM(column_id)")
-# )
-#
-#
-# @HANDLER.bind("column_details", "<int:column_id>/column_details", *data)
-# def column_details_view(request, column_id, column_details, column_cards):
-#     """
-# """    Executes the query to retrieve column details.
-#
-#     :param request: HttpRequest - The HTTP request object.
-#     :param column_details: str - The result of the column details query.
-#     :return: HttpResponse - The rendered HTML page with column details."""
-# """
-#
-#     # Define an internal class to represent a card in the column
-#     class _Card:
-#         def __init__(self, card_data):
-#             self.id = card_data["id"]
-#             self.title = card_data["title"]
-#             self.description = card_data["description"]
-#             self.expiration_date = card_data["expiration_date"]
-#             self.is_expired = self.check_if_expired()
-#
-#         # Method to check if the card is expired based on the current date and expiration date
-#         def check_if_expired(self):
-#             return timezone.now() > self.expiration_date if self.expiration_date else False
-#
-#     cards_column = [_Card(*card) for card in column_cards]
-#
-#     return render(request, "column_details.html", {
-#         "column": column_details,
-#         "cards_column": cards_column
-#     })
-#
-#
-# data = (
-#     DBRequestBuilder("column_cards", "No cards found for this column!")
-#     .select("id", "title", "description", "color", "creation_date", "expiration_date", "story_points", "index")
-#     .from_table("cards")
-#     .where("column_id = PARAM(column_id)"),
-# )
-#
-#
-# @HANDLER.bind("column_cards", "<int:column_id>/column_cards", *data)
-# def column_cards_view(request, column_id, column_cards):
-#     """
-# """    Executes the query to retrieve the list of cards for a specific column.
-#     :param request: HttpRequest - The HTTP request object.
-#     :param column_cards: str - The result of the column cards query.
-#     :return: HttpResponse - The rendered HTML page with the list of cards."""
-# """
-#     return render(request, "column_cards.html", {
-#         "cards": list(column_cards)
-#     })
-#
-#
-# data = (
-#     DBRequestBuilder("card_details", "No card found with this ID!")
-#     .select("id", "title", "description", "color", "creation_date", "expiration_date", "story_points")
-#     .from_table("cards")
-#     .where("id = PARAM(card_id)"),
-#
-# )
-#
-#
-# @HANDLER.bind("card_details", "<int:card_id>/card_details", *data)
-# def card_detail_view(request, card_id, card_details):
-#     """
-# """    Executes the query to retrieve card details.
-#     :param request: HttpRequest - The HTTP request object.
-#     :param card_details: str - The result of the card details query.
-#     :return: HttpResponse - The rendered HTML page with card details."""
-# """
-#
-#     return render(request, "card_details.html", {
-#         "card": card_details
-#     })
-#
-#
-# @HANDLER.bind("add_column", "<int:board_id>/add_column")  # Working view
-# def add_column_view(request, board_id):
-#     """
-# """    Adds a new column to the specified board if the user is authenticated and is the owner of the board.
-#     :param request: HttpRequest - The HTTP request object.
-#     :param board_id: int - The ID of the board where the column will be added.
-#     :param uuid: str - The UUID of the authenticated user passed by the RequestHandler.
-#     :return: JsonResponse - The JSON response with the result of the operation."""
-#    """
-#
-#     user = request.session.get('user_id', None)
-#
-#     if user is None:
-#         return JsonResponses.response(JsonResponses.ERROR, "You are not logged.")
-#
-#     try:
-#         board = Board.objects.get(id=board_id)
-#     except Board.DoesNotExist:
-#         return JsonResponses.response(JsonResponses.ERROR, "Board not found")
-#
-#     if board.owner.uuid != user:
-#         return JsonResponses.response(JsonResponses.ERROR, "You do not have permission to add a column to this board.")
-#
-#     if request.method != "POST":
-#         return JsonResponses.response(JsonResponses.ERROR, "Invalid request method.")
-#
-#     title = request.POST.get("title")
-#     color = request.POST.get("color")
-#     description = request.POST.get("description")
-#
-#     try:
-#         add_column_query = DBRequestBuilder("add_column", "Error while adding the column!")
-#         add_column_query.insert("columns", "board_id", "title", "color", "description")
-#         add_column_query.values(board_id, title, color, description)
-#
-#         db_service.execute(add_column_query.query())
-#
-#         return JsonResponses.response(JsonResponses.SUCCESS, "Column added successfully")
-#     except Exception as e:
-#         return JsonResponses.response(JsonResponses.ERROR, f"Error: {e}")
-#
-#
-# @HANDLER.bind("delete_column", "<int:board_id>/<int:column_id>/delete_column")
-# def delete_column_view(request, board_id, column_id):
-#     """
-#     Executes the query to delete a column from a board, but only if the current user is authenticated and is the owner of the board.
-#     :param request: HttpRequest - The HTTP request object.
-#     :param board_id: int - The ID of the board from which the column will be deleted.
-#     :param column_id: int - The ID of the column to be deleted.
-#     :return: JsonResponse - The JSON response with the result of the operation.
-#     """
-#
-#     user = request.session.get('user_id', None)
-#
-#     if user is None:
-#         return JsonResponses.response(JsonResponses.ERROR, "You are not logged.")
-#
-#     try:
-#         board = Board.objects.get(id=board_id)
-#     except Board.DoesNotExist:
-#         return JsonResponses.response(JsonResponses.ERROR, "Board not found")
-#
-#     if board.owner.uuid != user:
-#         return JsonResponses.response(JsonResponses.ERROR,
-#                                       "You do not have permission to delete a column from this board.")
-#
-#     if request.method != "POST":
-#         return JsonResponses.response(JsonResponses.ERROR, "Invalid request method.")
-#
-#     try:
-#         delete_column_query = DBRequestBuilder("delete_column", "Error while deleting the column!")
-#         delete_column_query.complex(f"DELETE FROM columns WHERE id = {column_id} AND board_id = {board_id}")
-#
-#         db_service.execute(delete_column_query.query())
-#
-#         return JsonResponses.response(JsonResponses.SUCCESS, "Column deleted successfully")
-#     except Exception as e:
-#         return JsonResponses.response(JsonResponses.ERROR, f"Error: {e}")
-#
-#
-# @HANDLER.bind("add_card", "<int:column_id>/add_card")
-# def add_card_view(request, column_id):
-#     """
-#     Executes the query to add a new card to a column, but only if the current user is authenticated and is the owner of the board.
-#     :param request: HttpRequest - The HTTP request object.
-#     :param column_id: int - The ID of the column where the card will be added.
-#     :return: JsonResponse - The JSON response with the result of the operation.
-#     """
-#
-#     user = request.session.get('user_id', None)
-#
-#     if user is None:
-#         return JsonResponses.response(JsonResponses.ERROR, "You are not logged.")
-#
-#     try:
-#         column = Column.objects.get(id=column_id)
-#         board = column.board_id
-#     except Column.DoesNotExist:
-#         return JsonResponses.response(JsonResponses.ERROR, "Column not found")
-#
-#     if board.owner.uuid != user:
-#         return JsonResponses.response(JsonResponses.ERROR, "You do not have permission to add a card to this column.")
-#
-#     if request.method != "POST":
-#         return JsonResponses.response(JsonResponses.ERROR, "Invalid request method.")
-#
-#     title = request.POST.get("title")
-#     description = request.POST.get("description")
-#     color = request.POST.get("color")
-#     expiration_date = request.POST.get("expiration_date")
-#
-#     try:
-#         add_card_query = DBRequestBuilder("add_card", "Error while adding the card!")
-#         add_card_query.insert("cards", "column_id", "title", "description", "color", "expiration_date")
-#         add_card_query.values(column_id, title, description, color, expiration_date)
-#
-#         db_service.execute(add_card_query.query())
-#
-#         return JsonResponses.response(JsonResponses.SUCCESS, "Card added successfully")
-#     except Exception as e:
-#         return JsonResponses.response(JsonResponses.ERROR, f"Error: {e}")
-#
-#
-# @HANDLER.bind("delete_card", "<int:column_id>/<int:card_id>/delete_card")
-# def delete_card_view(request, column_id, card_id):
-#     """
-#     Executes the query to delete a card from a column, but only if the current user is authenticated and is the owner of the board.
-#     :param request: HttpRequest - The HTTP request object.
-#     :param column_id: int - The ID of the column from which the card will be deleted.
-#     :param card_id: int - The ID of the card to be deleted.
-#     :return: JsonResponse - The JSON response with the result of the operation.
-#     """
-#
-#     user = request.session.get('user_id', None)
-#
-#     if user is None:
-#         return JsonResponses.response(JsonResponses.ERROR, "You are not logged.")
-#
-#     try:
-#         column = Column.objects.get(id=column_id)
-#         board = column.board_id
-#     except Column.DoesNotExist:
-#         return JsonResponses.response(JsonResponses.ERROR, "Column not found")
-#
-#     if board.owner != user:
-#         return JsonResponses.response(JsonResponses.ERROR,
-#                                       "You do not have permission to delete a card from this column.")
-#
-#     if request.method != "POST":
-#         return JsonResponses.response(JsonResponses.ERROR, "Invalid request method.")
-#
-#     try:
-#
-#         delete_card_query = DBRequestBuilder("delete_card", "Error while deleting the card!")
-#         delete_card_query.complex(f"DELETE FROM cards WHERE id = {card_id} AND column_id = {column_id}")
-#
-#         db_service.execute(delete_card_query.query())
-#
-#         return JsonResponses.response(JsonResponses.SUCCESS, "Card deleted successfully")
-#     except Exception as e:
-#         return JsonResponses.response(JsonResponses.ERROR, f"Error: {e}")
-#
-#
-# @HANDLER.bind('update_column', '<int:board_id>/<int:column_id>/changes')
-# def update_column_view(request, board_id, column_id):
-#     """
-#     Executes the query to delete a card from a column, but only if the current user is authenticated and is the owner of the board.
-#
-#     Parameters:
-#     - request: HttpRequest object containing the request details.
-#     - column_id: The ID of the column from which the card will be deleted.
-#     - card_id: The ID of the card to be deleted.
-#
-#     Returns:
-#     - JsonResponse: The JSON response containing the result of the operation.
-#     """
-#
-#     column = Column.objects.filter(id=column_id, board_id=board_id).first()
-#
-#     if not column:
-#         return JsonResponses.response(JsonResponses.ERROR, "Column not found.")
-#
-#     if request.method != "POST":
-#         return JsonResponses.response(JsonResponses.ERROR, "Invalid request method.")
-#
-#     new_name = request.POST.get('title', None)
-#
-#     if not new_name:
-#         return JsonResponses.response(JsonResponses.ERROR, "Column name cannot be empty.")
-#
-#     column.title = new_name
-#
-#     try:
-#         column.save()
-#
-#         return JsonResponses.response(JsonResponses.SUCCESS, "Column name updated successfully.")
-#     except Exception as e:
-#         return JsonResponses.response(JsonResponses.ERROR, f"Error updating column name: {str(e)}")
-#
-#
-# @HANDLER.bind('update_card', '<int:board_id>/<int:column_id>/<int:card_id>/changes')
-# def update_card_view(request, board_id, column_id, card_id):
-#     """
-#     Updates the title, description, expiration date, story points, and column of a card, but only if the current user is authenticated and is the owner of the board.
-#
-#     Parameters:
-#     - request: HttpRequest object containing the request details.
-#     - board_id: The ID of the board to which the card belongs.
-#     - column_id: The ID of the current column of the card.
-#     - card_id: The ID of the card to be updated.
-#
-#     Returns:
-#     - JsonResponse: The JSON response containing the result of the operation.
-#     """
-#
-#     card = Card.objects.filter(id=card_id, board_id=board_id, column_id=column_id).first()
-#
-#     if not card:
-#         return JsonResponses.response(JsonResponses.ERROR, "Card not found.")
-#
-#     if request.method != "POST":
-#         return JsonResponses.response(JsonResponses.ERROR, "Invalid request method.")
-#
-#     updates = {
-#         'title': None,
-#         'description': None,
-#         'expiration_date': None,
-#         'story_points': None,
-#         'column_id': None
-#     }
-#
-#     for key in updates.keys():
-#         if key in request.POST:
-#             updates[key] = request.POST.get(key)
-#
-#     if updates['title']:
-#         card.title = updates['title']
-#
-#     if updates['description']:
-#         card.description = updates['description']
-#
-#     if updates['expiration_date']:
-#         card.expiration_date = updates['expiration_date']
-#
-#     if updates['story_points']:
-#         card.story_points = updates['story_points']
-#
-#     if updates['column_id']:
-#         new_column = Column.objects.filter(id=updates['column_id'], board_id=board_id).first()
-#         if not new_column:
-#             return JsonResponses.response(JsonResponses.ERROR, "Column not found.")
-#         card.column_id = new_column
-#
-#     try:
-#         card.save()
-#
-#         return JsonResponses.response(JsonResponses.SUCCESS, "Card updated successfully.")
-#     except Exception as e:
-#         return JsonResponses.response(JsonResponses.ERROR, f"Error updating card: {str(e)}")
-#
-#
-@HANDLER.bind("burndown", "burndown/<int:board_id>", request="GET", session=True)
-@requires_csrf_token
-def burndown_view(request, board_id):
-    """
-    Renders the burndown chart page with the board details.
-    Requires the method to be GET and the user to be authenticated.
-
-    :param request: HttpRequest - The HTTP request object.
-    :param board_id: int - The ID of the board to display.
-    :return: HttpResponse - The rendered HTML page with the burndown chart.
-    """
-    uuid = get_user_from(request)
-    board = get_board(Board, board_id)
-
-    if check_board_invalid(board):
-        return response_error("Board not found.")
-
-    if check_user_not_owner_or_guest(Board, Guest, board_id, uuid):
-        return response_error("You do not have access to this board.")
-
-    cards = get_cards_of_board(Card, board_id)
-    expired_cards = get_expired_cards_of_board(Card, board_id)
-
-    total_cards = cards.count()
-    total_expired_cards = expired_cards.count()
-
-    class TemplateColumn:
-        def __init__(self, _column_title, _card_count):
-            self.name = _column_title
-            self.card_count = _card_count
-
-    # column cards
-    columns = get_columns(Column, board_id)
-    cards_per_column = []
-    for column in columns:
-        template_column = TemplateColumn(column.title, Card.objects.filter(column_id=column.id).count())
-        cards_per_column.append(template_column)
-
-    # story_points
-    total_story_points = 0
-    for card in cards:
-        total_story_points += card.story_points
-
-    return render(request, 'burndown.html', {
-        'board': board,
-        'total_cards': total_cards,
-        'cards_per_column': cards_per_column,
-        'expired_cards': total_expired_cards,
-        'total_story_points': total_story_points
-    })
 
 
 @HANDLER.bind('dashboard', 'dashboard/', request='GET', session=True)
@@ -535,210 +55,94 @@ def dashboard(request):
     })
 
 
-@HANDLER.bind("create_board", "dashboard/new_board/", request="POST", session=True)
+@HANDLER.bind("board", "board/<int:board_id>/", request="GET", session=True)
 @requires_csrf_token
-def create_board_view(request):
+def board(request, board_id):
     """
-    Renders the create board page with the user details.
-    Requires the method to be POST and the user to be authenticated.
+    Renders the board page with the board details and columns.
+    Requires the method to be GET and the user to be authenticated.
 
     :param request: HttpRequest - The HTTP request object.
-    :return: JsonResponse - The JSON response with the result of the operation.
-    """
-    uuid = get_user_from(request)
-
-    name = request.POST.get("board_title")
-
-    if not name:
-        return response_error("Board's name is required.")
-
-    try:
-        new_board = Board.objects.create(
-            owner=uuid,
-            name=name,
-            creation_date=no_timezone(datetime.now()))
-        new_board.save()
-    except Exception as e:
-        return response_error(f"Couldn't create the board: {e}")
-
-    return redirect('core:board', board_id=new_board.id)
-
-
-@HANDLER.bind("create_column", "board/<int:board_id>/new_column/", request="POST", session=True)
-@requires_csrf_token
-def create_column_view(request, board_id):
-    """
-    Creates a new column for the logged-in user.
-    Requires the method to be POST and the user to be authenticated.
-
-    :param request: HttpRequest - The HTTP request object.
-    :param board_id: int - The ID of the board where the column will be added.
-    :return: JsonResponse - The JSON response with the result of the operation.
+    :param board_id: int - The ID of the board to display.
+    :return: HttpResponse - The rendered HTML page with the board details.
     """
     uuid = get_user_from(request)
     board = get_board(Board, board_id)
 
     if check_board_invalid(board):
-        return redirect('core:dashboard')
+        return response_error("Board not found.")
 
-    title = request.POST.get("column_title")
-    color = request.POST.get("column_color")
-    description = request.POST.get("column_description")
+    if check_user_not_owner_or_guest(Board, Guest, board_id, uuid):
+        return response_error("You do not have access to this board.")
 
-    if not title or not description:
-        return response_error("Title and description are required.")
+    board_info = {
+        'id': board.id,
+        'name': board.name,
+        'description': board.description,
+        'image': board.image,
+        'creation_date': board.creation_date
+    }
 
-    column_index = get_columns(Column, board_id).count()
-
-    if column_index != 0:
-        column_index -= 1
-
-    try:
-        new_column = Column.objects.create(
-            board_id=uuid,
-            title=title,
-            color=color,
-            description=description,
-            index=column_index
-        )
-        new_column.save()
-    except Exception as e:
-        return response_error(f"Couldn't create the column: {e}")
-
-    return redirect('core:board', board_id=board_id)
+    columns = get_board_elements(Column, Card, Assignee, User, board_id)
+    return render(request, "boards.html", {
+        "board": board_info,
+        "columns": columns
+    })
 
 
-@HANDLER.bind("create_card", "board/<int:board_id>/new_card/", request="POST", session=True)
+@HANDLER.bind("burndown", "burndown/<int:board_id>/", request="GET", session=True)
 @requires_csrf_token
-def create_card_view(request, board_id):
+def burndown_view(request, board_id):
     """
-    Creates a new card for the logged-in user.
-    Requires the method to be POST and the user to be authenticated.
+    Renders the burndown chart page with the board details.
+    Requires the method to be GET and the user to be authenticated.
 
     :param request: HttpRequest - The HTTP request object.
-    :param board_id: int - The ID of the board where the card will be added.
-    :return: JsonResponse - The JSON response with the result of the operation.
+    :param board_id: int - The ID of the board to display.
+    :return: HttpResponse - The rendered HTML page with the burndown chart.
     """
-
-    user = get_user_from(request)
+    uuid = get_user_from(request)
     board = get_board(Board, board_id)
 
     if check_board_invalid(board):
-        return redirect('core:dashboard')
+        return response_error("Board not found.")
 
-    title = request.POST.get("card_title")
-    description = request.POST.get("card_description")
-    column = request.POST.get("column")
+    if check_user_not_owner_or_guest(Board, Guest, board_id, uuid):
+        return response_error("You do not have access to this board.")
 
-    if not title or not description:
-        return response_error("Title and description are required.")
+    class TemplateColumn:
+        def __init__(self, _column):
+            nonlocal board
+            self.name = _column.title
+            cards = Card.objects.filter(column_id=_column, board_id=board)
+            self.active_cards = cards.filter(expiration_date__gt=no_timezone(datetime.now()), completion_date__isnull=True).count() \
+                                + cards.filter(expiration_date__isnull=True).count()
+            self.expired_cards = cards.filter(expiration_date__lt=no_timezone(datetime.now()), completion_date__isnull=True).count()
+            self.completed_cards = cards.filter(completion_date__isnull=False).count()
+            self.total_cards = cards.count()
+            self.story_points = cards.aggregate(total_story_points=Sum(F('story_points')))['total_story_points']
 
-    if not column:
-        return response_error("You must select a column to create a new card.")
+    # column cards
+    columns = get_columns(Column, board_id)
+    columns = [TemplateColumn(column) for column in columns]
+    total_cards = sum([column.total_cards for column in columns])
+    total_active_cards = sum([column.active_cards for column in columns])
+    total_expired_cards = sum([column.expired_cards for column in columns])
+    total_completed_cards = sum([column.completed_cards for column in columns])
+    total_story_points = sum([column.story_points for column in columns])
 
-    try:
-        new_card = Card.objects.create(
-            owner=user,
-            title=title,
-            description=description,
-            creation_date=no_timezone(datetime.now())
-        )
-        new_card.save()
-    except Exception as e:
-        return response_error(f"Couldn't create the card: {e}")
-
-    return redirect('core:board', board_id=board_id)
-
-
-# @HANDLER.bind("add_user", "board/<int:board_id>/add_user/")
-# def add_user_view(request, board_id):
-#     """
-#     Executes the query to add a user to a board using the username, but only if the current user is authenticated and is the owner of the board.
-#     :param request: HttpRequest - The HTTP request object.
-#     :param board_id: int - The ID of the board where the user will be added.
-#     :return: JsonResponse - The JSON response with the result of the operation.
-#     """
-#
-#     user = request.session.get('user_id', None)
-#     if user is None:
-#         return JsonResponses.response(JsonResponses.ERROR, "You are not logged.")
-#
-#     if request.method != "POST":
-#         return JsonResponses.response(JsonResponses.ERROR, "Invalid request method.")
-#
-#     try:
-#         board = Board.objects.get(id=board_id)
-#     except Board.DoesNotExist:
-#         return JsonResponses.response(JsonResponses.ERROR, "Board not found.")
-#
-#     if board.owner != user:
-#         return JsonResponses.response(JsonResponses.ERROR, "You do not have permission to add a user to this board.")
-#
-#     username_to_add = request.POST.get("username")
-#
-#     try:
-#         find_user_query = DBRequestBuilder("find_user", "User not found!")
-#         (find_user_query.select("uuid").from_table("user").where(f"username = {username_to_add}"))
-#
-#         user_to_add = db_service.execute(find_user_query.query())
-#
-#         if not user_to_add:
-#             return JsonResponses.response(JsonResponses.ERROR, "User not found.")
-#         user_to_add_id = user_to_add[0][0]
-#     except Exception as e:
-#         return JsonResponses.response(JsonResponses.ERROR, f"Error: {e}")
-#
-#     try:
-#         check_membership_query = DBRequestBuilder("check_membership", "Error checking membership!")
-#         check_membership_query.select("id").from_table("guests").where(f"user_id = {user_to_add_id} AND board_id = {board_id}")
-#         existing_member = db_service.execute(check_membership_query.query())
-#
-#         if existing_member:
-#             return JsonResponses.response(JsonResponses.ERROR, "User is already a member of this board.")
-#     except Exception as e:
-#         return JsonResponses.response(JsonResponses.ERROR, f"Error: {e}")
-#
-#     try:
-#         add_user_query = DBRequestBuilder("add_user", "Error while adding the user to the board!")
-#         add_user_query.insert("guests", "user_id", "board_id") \
-#                         .values(user_to_add_id, board_id)
-#
-#         db_service.execute(add_user_query.query())
-#
-#         return JsonResponses.response(JsonResponses.SUCCESS, f"User {username_to_add} added to the board.")
-#     except Exception as e:
-#         return JsonResponses.response(JsonResponses.ERROR, f"Error: {e}")
-#
-#
-
-@HANDLER.bind("remove_user", "board/<int:board_id>/remove_user/", request="POST", session=True)
-@requires_csrf_token
-def remove_user_view(request, board_id):
-    """
-    Executes the query to remove a user from a board using the username, but only if the current user is authenticated
-    and is the owner of the board.
-    :param request: HttpRequest - The HTTP request object.
-    :param board_id: int - The ID of the board from which the user will be removed.
-    :return: JsonResponse - The JSON response with the result of the operation.
-    """
-    uuid = get_user_from(request)
-
-    if check_user_not_owner(Board, board_id, uuid):
-        response_error("You don't own this board.")
-
-    username_to_remove = request.POST.get("username")
-
-    try:
-        uuid = str(get_user(User, username=username_to_remove).uuid)
-        if guest := get_guest(Guest, board_id, uuid):
-            guest.delete()
-    except Exception as e:
-        return response_error(f"Error: {e}")
-
-    return response_success(f"{username_to_remove} has been removed successfully from this board.")
+    return render(request, 'burndown.html', {
+        'board': board,
+        'columns': columns,
+        'total_active_cards': total_cards,
+        'total_expired_cards': total_expired_cards,
+        'total_completed_cards': total_completed_cards,
+        'total_cards': total_story_points,
+        'total_story_points': total_story_points,
+    })
 
 
-@HANDLER.bind("burndown_image", "burndown/<int:board_id>/image", request="GET", session=True)
+@HANDLER.bind("burndown_image", "burndown/<int:board_id>/image/", request="GET", session=True)
 @requires_csrf_token
 def burndown_image_view(request, board_id):
     """
@@ -752,7 +156,7 @@ def burndown_image_view(request, board_id):
     uuid = get_user_from(request)
     board = get_board(Board, board_id)
 
-    if check_board_invalid(board):
+    if not board:
         response_error("Board not found.")
 
     if check_user_not_owner_or_guest(Board, Guest, board_id, uuid):
@@ -806,9 +210,500 @@ def burndown_image_view(request, board_id):
     return generate_burndown_image(total_cards - expired_cards, expired_cards)
 
 
-@HANDLER.bind("board_creation", "dashboard/creation/", request="GET", session=True)
+@HANDLER.bind("new_board", "dashboard/new/board/", request="POST", session=True)
 @requires_csrf_token
-def modal_board_creation(request):
+def new_board(request):
+    """
+    Renders the create board page with the user details.
+    Requires the method to be POST and the user to be authenticated.
+
+    :param request: HttpRequest - The HTTP request object.
+    :return: JsonResponse - The JSON response with the result of the operation.
+    """
+    uuid = get_user_from(request)
+    user = get_user(User, uuid)
+
+    board_title = request.POST.get("board_title")
+
+    if not board_title:
+        return response_error("Board's name is required.")
+
+    try:
+        BoardValidations(board_title=board_title).result()
+    except ModelsAttributeError as e:
+        return response_error(f"Could not create the board: {e}")
+
+    try:
+        new_board = Board.objects.create(
+            owner=user,
+            name=board_title,
+            creation_date=no_timezone(datetime.now()))
+        new_board.save()
+    except Exception as e:
+        return response_error(f"Couldn't create the board: {e}")
+
+    return redirect('core:board', board_id=new_board.id)
+
+
+@HANDLER.bind("new_column", "board/<int:board_id>/new/column/", request="POST", session=True)
+@requires_csrf_token
+def new_column(request, board_id):
+    """
+    Creates a new column for the logged-in user.
+    Requires the method to be POST and the user to be authenticated.
+
+    :param request: HttpRequest - The HTTP request object.
+    :param board_id: int - The ID of the board where the column will be added.
+    :return: JsonResponse - The JSON response with the result of the operation.
+    """
+    uuid = get_user_from(request)
+
+    if check_user_not_owner(Board, board_id, uuid):
+        return response_error("You do not have access to this board.")
+
+    board = get_board(Board, board_id)
+
+    if check_board_invalid(board):
+        return redirect('core:dashboard')
+
+    title = request.POST.get("column_title")
+    description = request.POST.get("column_description")
+    color = request.POST.get("color")
+
+    if not title or not description:
+        return response_error("Title and description are required.")
+
+    try:
+        ColumnValidations(column_title=title, column_description=description, color=color).result()
+    except ModelsAttributeError as e:
+        return response_error(f"Could not create the column: {e}")
+
+    column_index = get_columns(Column, board_id).count()
+
+    if column_index != 0:
+        column_index -= 1
+
+    try:
+        new_column = Column.objects.create(
+            board_id=board,
+            title=title,
+            color=color,
+            description=description,
+            index=column_index
+        )
+        new_column.save()
+    except Exception as e:
+        return response_error(f"Couldn't create the column: {e}")
+
+    return redirect('core:board', board_id=board_id)
+
+
+@HANDLER.bind("new_card", "board/<int:board_id>/new/card/", request="POST", session=True)
+@requires_csrf_token
+def new_card(request, board_id):
+    """
+    Creates a new column for the logged-in user.
+    :param request: HttpRequest - The HTTP request object.
+    :param uuid: str - The UUID of the authenticated user passed by the RequestHandler.
+    :return: JsonResponse - The JSON response with the result of the operation.
+    """
+    uuid = get_user_from(request)
+    user = get_user_from(request)
+    board = get_board(Board, board_id)
+
+    if check_board_invalid(board):
+        return redirect('core:dashboard')
+
+    if check_user_not_owner_or_guest(Board, Guest, board_id, uuid):
+        return response_error("You do not have access to this board.")
+
+    title = request.POST.get("card_title")
+    description = request.POST.get("card_description")
+    color = request.POST.get("color")
+    column_id = request.POST.get("column")
+    date = request.POST.get("expiration_date", None)
+    story_points = request.POST.get("story_points", 0)
+
+    index = Card.objects.filter(column_id=column_id, board_id=board.id).count()
+
+    if not title or not description:
+        return response_error("Title and description are required.")
+
+    if not column_id:
+        return response_error("You must select a column to create a new card.")
+
+    values = {
+        "column_id":Column.objects.filter(id=column_id).first(),
+        "board_id": board,
+        "title":title,
+        "description": description,
+        "color": color,
+        "creation_date": no_timezone(datetime.now()),
+        "story_points": story_points,
+        "index": index
+    }
+    if date:
+        values["expiration_date"] = date
+
+    try:
+        CardValidations(**values).result()
+    except ModelsAttributeError as e:
+        return response_error(f"Could not create the card: {e}")
+
+    try:
+        new_card = Card.objects.create(**values)
+        new_card.save()
+    except Exception as e:
+        return response_error(f"Couldn't create the card: {e}")
+
+    return redirect('core:board', board_id=board_id)
+
+
+@HANDLER.bind("board_update", "board/<int:board_id>/update/", request="POST", session=True)
+@requires_csrf_token
+def update_board(request, board_id):
+    """
+    Updates the board details.
+    Requires the method to be POST and the user to be authenticated.
+
+    :param request: HttpRequest - The HTTP request object.
+    :param board_id: int - The ID of the board to update.
+    :return: JsonResponse - The JSON response with the result of the operation.
+    """
+    uuid = get_user_from(request)
+    user = get_user(User, uuid)
+    board = get_board(Board, board_id)
+
+    if check_board_invalid(board):
+        return response_error("Board not found.")
+
+    if check_user_not_owner(Board, board_id, uuid):
+        return response_error("You are not the owner of this board.")
+
+    updates = {
+        'board_title': None,
+        'board_description': None
+    }
+
+    for key in updates.keys():
+        if not key in request.POST.keys():
+            continue
+        updates[key] = request.POST.get(key)
+
+    updates = { k: v for k, v in updates.items() if v is not None }
+
+    if img := request.FILES.get('image', None):
+        updates['image'] = request.FILES.get('image')
+
+    try:
+        BoardValidations(**updates).result()
+    except ModelsAttributeError as e:
+        return response_error(f"Could not update this board's details: {e}")
+
+    try:
+        if img := updates.get('image', None):
+            random_name = f"{uuid4()}{img.name[img.name.rfind('.'):]}"
+            img.name = random_name
+            board.image = img
+        if title := updates.get('board_title', None):
+            board.name = title
+        if description := updates.get('board_description', None):
+            board.description = description
+        board.save()
+    except Exception as e:
+        return response_error(f"Couldn't update the board: {e}")
+
+    return response_success("Board updated successfully.")
+
+
+@HANDLER.bind("update_column", "board/<int:board_id>/column/<int:column_id>/update/", request="POST", session=True)
+@requires_csrf_token
+def update_column(request, board_id, column_id):
+    """
+    Updates the column details.
+    Requires the method to be POST and the user to be authenticated.
+
+    :param request: HttpRequest - The HTTP request object.
+    :param board_id: int - The ID of the board to update.
+    :param column_id: int - The ID of the column to update.
+    :return: JsonResponse - The JSON response with the result of the operation.
+    """
+    uuid = get_user_from(request)
+    user = get_user(User, uuid)
+    board = get_board(Board, board_id)
+    column = Column.objects.filter(id=column_id, board_id=board).first()
+
+    if check_board_invalid(board):
+        return response_error("Board not found.")
+
+    if check_user_not_owner_or_guest(Board, Guest, board_id, uuid):
+        return response_error("You are not the owner of this board.")
+
+    if not column:
+        return response_error("Column not found.")
+
+    updates = {
+        'column_title': None,
+        'column_description': None,
+        'column_color': None,
+    }
+
+    for key in updates.keys():
+        if not key in request.POST.keys():
+            continue
+        updates[key] = request.POST.get(key)
+
+    updates = { k: v for k, v in updates.items() if v is not None }
+
+    try:
+        ColumnValidations(**updates).result()
+    except ModelsAttributeError as e:
+        return response_error(f"Couldn't update this column: {e}")
+
+    try:
+        if title := updates.get('column_title', None):
+            column.title = title
+        if description := updates.get('column_description', None):
+            column.description = description
+        if color := updates.get('column_color', None):
+            column.color = color
+        column.save()
+    except Exception as e:
+        return response_error(f"Couldn't update the column: {e}")
+
+    return response_success("Column updated successfully.")
+
+
+@HANDLER.bind("board_update_elements", "board/<int:board_id>/update/elements/", session=True, request="POST")
+def update_board_elements(request, board_id):
+    uuid = get_user_from(request)
+    if check_user_not_owner_or_guest(Board, Guest, board_id, uuid):
+        return response_error("You do not have access to this board.")
+
+    board = get_board(Board, board_id)
+    columns = json.loads(request.body)
+
+    for column in columns:
+        column_id = int(column.get("id"))
+        column_index = int(column.get("index"))
+        col_instance = Column.objects.filter(id=column_id, board_id=board.id).first()
+        col_instance.index = column_index
+        col_instance.save()
+        for card in column.get("cards"):
+            card_id = int(card.get("id"))
+            card_index = int(card.get("index"))
+            card_instance = Card.objects.filter(id=card_id, board_id=board.id).first()
+            card_instance.index = card_index
+            card_instance.column_id = col_instance
+            card_instance.save()
+
+    return response_success("Board elements updated successfully.")
+
+
+@HANDLER.bind("board_update_sync", "board/<int:board_id>/update/sync/", session=True, request="GET")
+def sync_board(request, board_id):
+    uuid = get_user_from(request)
+    if check_user_not_owner_or_guest(Board, Guest, board_id, uuid):
+        return response_error("You do not have access to this board.")
+
+    board = get_board(Board, board_id)
+    columns = get_board_elements(Column, Card, Assignee, User, board_id)
+    return response_success(render(request, "modals/board_elements.html", {"columns": columns, "board": board}).content.decode("utf-8"))
+
+
+@HANDLER.bind("update_card", "board/<int:board_id>/card/<int:card_id>/update/", request="POST", session=True)
+@requires_csrf_token
+def update_card(request, board_id, card_id):
+    uuid = get_user_from(request)
+    user = get_user(User, uuid)
+    if not user:
+        return response_error("User not found.")
+
+    board = get_board(Board, board_id)
+    if not board:
+        return response_error("Board not found.")
+
+    if check_user_not_owner_or_guest(Board, Guest, board_id, uuid):
+        return response_error("You do not have access to this board.")
+
+    card = Card.objects.filter(id=card_id, board_id=board).first()
+
+    if not card:
+        return response_error("Card not found.")
+
+    updates = {
+        'card_title': None,
+        'card_description': None,
+        'color': None,
+        'expiration_date': None,
+        'story_points': None,
+        'completed': None
+    }
+    assignees = {}
+
+    for key in request.POST.keys():
+        if key in updates.keys():
+            updates[key] = request.POST.get(key)
+        elif key.startswith("assignee_"):
+            assignees[key.removeprefix("assignee_")] = request.POST.get(key)
+
+    updates = { k: v for k, v in updates.items() if v is not None }
+
+    try:
+        CardValidations(**updates).result()
+    except ModelsAttributeError as e:
+        return response_error(f"Could not update this card: {e}")
+
+    try:
+        if title := updates.get('card_title', None):
+            card.title = title
+        if description := updates.get('card_description', None):
+            card.description = description
+        if color := updates.get('color', None):
+            card.color = color
+        if date := updates.get('expiration_date', None):
+            card.expiration_date = date
+        if story_points := updates.get('story_points', None):
+            card.story_points = story_points
+        if completed := updates.get('completed', None):
+            print(completed)
+            if completed == "true":
+                completed = no_timezone(datetime.now())
+                card.completion_date = completed
+            else:
+                card.completion_date = None
+        card.save()
+
+        users = {get_user(User, username=assignee): False if value == "false" else True for assignee, value in assignees.items()}
+        for assignee, value in users.items():
+            if not assignee:
+                print(assignee)
+                continue
+            params = {"card_id":card, "user_id":assignee, "board_id":board}
+            exists = Assignee.objects.filter(**params).exists()
+            if not exists and value:
+                Assignee.objects.create(**params)
+            elif exists and not value:
+                Assignee.objects.filter(**params).delete()
+            else:
+                continue
+    except Exception as e:
+        return response_error(f"Couldn't update the card: {e}")
+
+    return response_success("Card updated successfully.")
+
+@HANDLER.bind("remove_board", "dashboard/remove/board/<int:board_id>/", request="POST", session=True)
+@requires_csrf_token
+def remove_board(request, board_id):
+
+    uuid = get_user_from(request)
+    user = get_user(User, uuid)
+    board = get_board(Board, board_id)
+
+    if not board:
+        return response_error("Board not found.")
+
+    if check_user_not_owner(Board, board_id, uuid):
+        return response_error("You are not the owner of this board.")
+
+    try:
+        board.delete()
+    except Exception as e:
+        return response_error(f"Couldn't delete the board: {e}")
+
+    return response_success("Board deleted successfully.")
+
+
+@HANDLER.bind("remove_column", "board/<int:board_id>/remove/column/<int:column_id>/", request="POST", session=True)
+@requires_csrf_token
+def remove_column(request, board_id, column_id):
+
+    uuid = get_user_from(request)
+    user = get_user(User, uuid)
+    board = get_board(Board, board_id)
+
+
+    if not board:
+        return response_error("Board not found.")
+
+    if check_user_not_owner(Board, board_id, uuid):
+        return response_error("You are not the owner of this board.")
+
+    column = Column.objects.filter(id=column_id, board_id=board).first()
+
+    if not column:
+        return response_error("Column not found.")
+
+    columns = Column.objects.filter(board_id=board, index__gt=column.index).all()
+    columns.update(index=F('index') - 1)
+
+    try:
+        column.delete()
+    except Exception as e:
+        return response_error(f"Couldn't delete the board: {e}")
+
+    return response_success("Column deleted successfully.")
+
+
+@HANDLER.bind("remove_card", "board/<int:board_id>/remove/card/<int:card_id>/", request="POST", session=True)
+@requires_csrf_token
+def remove_card(request, board_id, card_id):
+    uuid = get_user_from(request)
+    user = get_user(User, uuid)
+    board = get_board(Board, board_id)
+
+    if not board:
+        return response_error("Board not found.")
+
+    if check_user_not_owner_or_guest(Board, Guest, board_id, uuid):
+        return response_error("You are not the owner of this board.")
+
+    card = Card.objects.filter(id=card_id, board_id=board).first()
+
+    if not card:
+        return response_error("Card not found.")
+
+    cards = Card.objects.filter(column_id=card.column_id, index__gt=card.index).all()
+    cards.update(index=F('index') - 1)
+
+    try:
+        card.delete()
+    except Exception as e:
+        return response_error(f"Couldn't delete the card: {e}")
+
+    return response_success("Card deleted successfully.")
+
+
+@HANDLER.bind("remove_user", "board/<int:board_id>/remove/user/", request="POST", session=True)
+@requires_csrf_token
+def remove_user_view(request, board_id):
+    """
+    Executes the query to remove a user from a board using the username, but only if the current user is authenticated
+    and is the owner of the board.
+    :param request: HttpRequest - The HTTP request object.
+    :param board_id: int - The ID of the board from which the user will be removed.
+    :return: JsonResponse - The JSON response with the result of the operation.
+    """
+    uuid = get_user_from(request)
+
+    if check_user_not_owner(Board, board_id, uuid):
+        response_error("You don't own this board.")
+
+    username_to_remove = request.POST.get("username")
+
+    try:
+        uuid = str(get_user(User, username=username_to_remove).uuid)
+        if guest := get_guest(Guest, board_id, uuid):
+            guest.delete()
+    except Exception as e:
+        return response_error(f"Error: {e}")
+
+    return response_success(f"{username_to_remove} has been removed successfully from this board.")
+
+
+@HANDLER.bind("new_board_modal", "dashboard/new/board/modal/", request="GET", session=True)
+@requires_csrf_token
+def new_board_modal(request):
     """
     Renders the modal for creating a new board.
     Requires the method to be GET and the user to be authenticated.
@@ -816,26 +711,12 @@ def modal_board_creation(request):
     :param request: HttpRequest - The HTTP request object.
     :return: HttpResponse - The HTML response with the modal for creating a new board.
     """
-    modal = """
-        <div class="form-box" style="width: 100%; height: 100%; border-radius: 8px;">
-            <h1 class="form-title">Create a new board</h1>
-            <div class="input-container">
-                <img src="../../static/assets/icons/tag.svg" alt="Title Icon" class="input-icon">
-                <input type="text" class="input-field" id="board_title" name="board_title" placeholder="Board title" required>
-            </div>
-            <button type="submit" class="button submit-button" id="create">Create</button>
-            <script>
-                document.querySelector("#create").addEventListener("click", () => {
-                    triggerMicro('new_board/', ['board_title'], displayMessage, displayMessage);
-                });
-            </script>
-        </div>
-    """
+    modal = render(request, "modals/new_board.html")
     return HttpResponse(modal)
 
-@HANDLER.bind("column_creation", "board/<int:board_id>/creation/column/", request="GET", session=True)
+@HANDLER.bind("new_column_modal", "board/<int:board_id>/new/column/modal/", request="GET", session=True)
 @requires_csrf_token
-def modal_column_creation(request, board_id):
+def new_column_modal(request, board_id):
     """
     Renders the modal for creating a new column.
     Requires the method to be GET and the user to be authenticated.
@@ -844,39 +725,17 @@ def modal_column_creation(request, board_id):
     :param board_id: int - The ID of the board where the column will be added.
     :return: HttpResponse - The HTML response with the modal for creating a new column.
     """
-    arguments = {'board_id':board_id}
-    print(reverse('core:create_card', kwargs=arguments))
+    uuid = get_user_from(request)
+    if check_user_not_owner(Board, board_id, uuid):
+        return response_error("You do not have access to this board.")
 
-    modal = f"""
-        <div class="form-box" style="width: 100%; height: 100%; border-radius: 8px;">
-            <h1 class="form-title">Create a new column</h1>
-            <div class="input-container">
-                <img src="../../static/assets/icons/tag.svg" alt="Title Icon" class="input-icon">
-                <input type="text" class="input-field" id="column_title" name="column_title" placeholder="Column title" required>
-            </div>
-            <div class="input-container">
-                <img src="../../static/assets/icons/description.svg" alt="Description Icon" class="input-icon">
-                <textarea class="input-field" id="column_description" name="column_description" maxlength="256" rows="4" placeholder="Column description" required></textarea>
-            </div>
-            <div class="input-container">
-                <img src="../../static/assets/icons/paint.svg" alt="Color Icon" class="input-icon">
-                <input class="input-field" type="color" id="color" name="color" value="#808080">
-            </div>
-            <button type="submit" class="button submit-button" id="create">Create</button>
-            <script>
-                document.querySelector("#create").addEventListener("click", () => {{
-                    triggerMicro('{reverse('core:create_column', kwargs=arguments)}', ['column_title', 'column_description', 'color'], displayMessage, displayMessage);
-                    hideModal();
-                }});
-            </script>
-        </div>
-    """
+    modal = render(request, "modals/new_column.html", {'board_id': board_id})
     return HttpResponse(modal)
 
 
-@HANDLER.bind("card_creation", "board/<int:board_id>/creation/card/", request="GET", session=True)
+@HANDLER.bind("new_card_modal", "board/<int:board_id>/new/card/modal/", request="GET", session=True)
 @requires_csrf_token
-def modal_card_creation(request, board_id):
+def new_card_modal(request, board_id):
     """
     Renders the modal for creating a new card.
     Requires the method to be GET and the user to be authenticated.
@@ -885,39 +744,240 @@ def modal_card_creation(request, board_id):
     :param board_id: int - The ID of the board where the card will be added.
     :return: HttpResponse - The HTML response with the modal for creating a new card.
     """
+    uuid = get_user_from(request)
+    if check_user_not_owner_or_guest(Board, Guest, board_id, uuid):
+        return response_error("You do not have access to this board.")
+
     columns = [{'id': column.id, 'title': column.title} for column in get_columns(Column, board_id)]
     if not columns:
-        return HttpResponse("No columns available. You must have at least one column before creating a card.", status=400)
+        return response_error("No columns available. You must have at least one column before creating a card.")
 
-    arguments = {'board_id':board_id}
-
-    modal = f"""
-        <div class="form-box" style="width: 100%; height: 100%; border-radius: 8px;">
-            <h1 class="form-title">Create a new card</h1>
-            <div class="input-container">
-                <img src="../../static/assets/icons/tag.svg" alt="Title Icon" class="input-icon">
-                <input type="text" class="input-field" id="card_title" name="card_title" placeholder="Card title" required>
-            </div>
-            <div class="input-container">
-                <img src="../../static/assets/icons/description.svg" alt="Description Icon" class="input-icon">
-                <textarea class="input-field" id="card_description" name="card_description" maxlength="256" rows="4" placeholder="Card description" required></textarea>
-            </div>
-            <div class="input-container">
-                <img src="../../static/assets/icons/paint.svg" alt="Color Icon" class="input-icon">
-                <input class="input-field" type="color" id="color" name="color" value="#808080">
-            </div>
-            <div class="input-container">
-                <select id="column" name="cars">
-             """+ "\n".join([f"<option value={column['id']}>{column['title']}</option>" for column in columns]) + f"""
-                </select>
-            </div>
-            <button type="submit" class="button submit-button" id="create">Create</button>
-            <script>
-                document.querySelector("#create").addEventListener("click", () => {{
-                    triggerMicro('{reverse('core:create_card', kwargs=arguments)}', ['card_title', 'card_description', 'color'], displayMessage, displayMessage);
-                }});
-            </script>
-        </div>
-    """
+    modal = render(request, "modals/new_card.html", {'columns': columns, 'board_id': board_id})
     return HttpResponse(modal)
+
+
+@HANDLER.bind("update_column_modal", "board/<int:board_id>/column/<int:column_id>/modal/", request="GET", session=True)
+@requires_csrf_token
+def update_column_modal(request, board_id, column_id):
+    """
+    Renders the modal for updating a column.
+    Requires the method to be GET and the user to be authenticated.
+
+    :param request: HttpRequest - The HTTP request object.
+    :param board_id: int - The ID of the board where the column will be updated.
+    :param column_id: int - The ID of the column to update.
+    """
+    uuid = get_user_from(request)
+    if check_user_not_owner_or_guest(Board, Guest, board_id, uuid):
+        return response_error("You do not have access to this board.")
+
+    board = get_board(Board, board_id)
+    column = Column.objects.filter(id=column_id, board_id=board).first()
+    arguments = {'board_id': board_id, 'column_id': column_id}
+
+    modal = render(request, "modals/update_column.html", {
+        'board_id': board_id,
+        'column_id': column_id,
+        'column': column
+    })
+    return HttpResponse(modal)
+
+
+@HANDLER.bind("update_card_modal", "board/<int:board_id>/card/<int:card_id>/modal/", request="GET", session=True)
+@requires_csrf_token
+def update_card_modal(request, board_id, card_id):
+    """
+    Renders the modal for updating a card.
+    Requires the method to be GET and the user to be authenticated.
+
+    :param request: HttpRequest - The HTTP request object.
+    :param board_id: int - The ID of the board where the card will be added.
+    :return: HttpResponse - The HTML response with the modal for creating a new card
+    """
+    uuid = get_user_from(request)
+
+    if check_user_not_owner_or_guest(Board, Guest, board_id, uuid):
+        return response_error("You do not have access to this board.")
+
+    board = get_board(Board, board_id)
+    card = Card.objects.filter(id=card_id, board_id=board).first()
+
+    if not card:
+        return response_error("Card not found.")
+
+    class TemplateUser:
+        def __init__(self, user):
+            nonlocal card
+            self.username = user.username
+            self.is_assigned = Assignee.objects.filter(card_id=card, user_id=user).exists()
+
+    guests = [guest.user_id.uuid for guest in Guest.objects.filter(board_id=board)] + [board.owner.uuid]
+    users = User.objects.filter(uuid__in=guests)
+
+    users = [TemplateUser(user) for user in users]
+
+    modal = render(request, "modals/update_card.html", {
+        'board_id': board_id,
+        'card_id': card_id,
+        'card': card,
+        'users': users
+    })
+    return HttpResponse(modal)
+
+
+@HANDLER.bind("remove_board_modal", "dashboard/remove/board/<int:board_id>/modal/", request="GET", session=True)
+@requires_csrf_token
+def remove_board_modal(request, board_id):
+    """
+    Renders the modal for removing a board.
+    Requires the method to be GET and the user to be authenticated.
+
+    :param request: HttpRequest - The HTTP request object.
+    :param board_id: int - The ID of the board to remove.
+    :return: HttpResponse - The HTML response with the modal for removing a board
+    """
+    uuid = get_user_from(request)
+
+    if check_user_not_owner(Board, board_id, uuid):
+        return response_error("You are not allowed to invite someone to this board. You are not the Owner!")
+
+    name = get_board(Board, board_id).name
+    arguments = {'board_id': board_id}
+
+    modal = render(request, "modals/remove_something.html", {
+        "view": reverse('core:remove_board', kwargs=arguments),
+        "title": name,
+        "type": "Board"
+    })
+    return HttpResponse(modal)
+
+
+@HANDLER.bind("remove_column_modal", "board/<int:board_id>/remove/column/<int:column_id>/modal/", request="GET", session=True)
+@requires_csrf_token
+def remove_column_modal(request, board_id, column_id):
+    """
+    Renders the modal for removing a column.
+    Requires the method to be GET and the user to be authenticated.
+
+    :param request: HttpRequest - The HTTP request object.
+    :param board_id: int - The ID of the board where the column will be removed.
+    :param column_id: int - The ID of the column to remove.
+    :return: HttpResponse - The HTML response with the modal for removing a column.
+    """
+    uuid = get_user_from(request)
+
+    if check_user_not_owner(Board, board_id, uuid):
+        return response_error("You are not allowed to invite someone to this board. You are not the Owner!")
+
+    board = get_board(Board, board_id)
+    title = Column.objects.filter(id=column_id, board_id=board).first().title
+    arguments = {'board_id': board_id, 'column_id': column_id}
+
+    modal = render(request, "modals/remove_something.html", {
+        "view": reverse('core:remove_column', kwargs=arguments),
+        "title": title,
+        "type": "Column"
+    })
+    return HttpResponse(modal)
+
+
+@HANDLER.bind("remove_card_modal", "board/<int:board_id>/remove/card/<int:card_id>/modal/", request="GET", session=True)
+@requires_csrf_token
+def remove_card_modal(request, board_id, card_id):
+    """
+    Renders the modal for removing a card.
+    Requires the method to be GET and the user to be authenticated.
+
+    :param request: HttpRequest - The HTTP request object.
+    :param board_id: int - The ID of the board where the card will be removed.
+    :param card_id: int - The ID of the card to remove.
+    :return: HttpResponse - The HTML response with the modal for removing a card.
+    """
+    uuid = get_user_from(request)
+
+    if check_user_not_owner_or_guest(Board, Guest, board_id, uuid):
+        return response_error("You do not have access to this board.")
+
+    board = get_board(Board, board_id)
+    card = Card.objects.filter(id=card_id, board_id=board).first()
+    column_title = Column.objects.filter(id=card.column_id.id).first().title
+
+    arguments = {'board_id': board_id, 'card_id': card_id}
+
+    modal = render(request, "modals/remove_something.html", {
+        "view": reverse('core:remove_card', kwargs=arguments),
+        "title": f"{column_title} - {card.title}",
+        "type": "Card"
+    })
+    return HttpResponse(modal)
+
+
+@HANDLER.bind("manage_assignees", "board/<int:board_id>/new/user/", request="POST", session=True)
+@requires_csrf_token
+def invite_user(request, board_id):
+    uuid = get_user_from(request)
+    board = get_board(Board, board_id)
+
+    if not board:
+        return response_error("Board not found.")
+
+    if check_user_not_owner(Board, board_id, uuid):
+        return response_error("You are not allowed to invite someone to this board. You are not the Owner!")
+
+    guests = []
+    for key in request.POST.keys():
+        if key.startswith("user_"):
+            guests.append(request.POST.get(key))
+
+    guests = [get_user(User, username=username) for username in guests]
+
+    Guest.objects.filter(board_id=board).exclude(user_id__in=guests).delete()
+
+    for guest in guests:
+        if not Guest.objects.filter(board_id=board, user_id=guest).exists():
+            Guest.objects.create(board_id=board, user_id=guest)
+
+    return response_success("Changes committed successfully.")
+
+
+
+@HANDLER.bind("new_user_modal", "board/<int:board_id>/new/user/modal/", request="GET", session=True)
+@requires_csrf_token
+def invite_user_modal(request, board_id):
+    """
+    Renders the modal for inviting a new user to the board.
+    Requires the method to be GET and the user to be authenticated.
+
+    :param request: HttpRequest - The HTTP request object.
+    :param board_id: int - The ID of the board where the user will be invited.
+    :return: HttpResponse - The HTML response with the modal for inviting a new user.
+    """
+    uuid = get_user_from(request)
+
+    if check_user_not_owner(Board, board_id, uuid):
+        return response_error("You are not allowed to invite someone to this board. You are not the Owner!")
+
+    users = User.objects.all().exclude(uuid=uuid) # Remove the owner of the board from the list of users to invite
+    assignees = [user for user in users if not check_user_not_guest(Guest, board_id, user.uuid)] # Find all guests of the board
+    users = users.exclude(uuid__in=[assignee.uuid for assignee in assignees]) # Find all users not in the already assigned list
+
+    modal = render(request, "modals/manage_users.html", {
+        'board_id': board_id,
+        'users': users,
+        'assignees': assignees
+    })
+    return HttpResponse(modal)
+
+
+@HANDLER.bind("acceptance_deletion", "acceptance/delete/", request="GET", session=False)
+@requires_csrf_token
+def acceptance_deletion(request):
+
+    User.objects.filter(username="acceptancetest").delete()
+    # Board.objects.filter(name="Acceptance Board").delete()
+
+    request.session.flush()
+    print("Deleted acceptance user.")
+
+    return redirect(reverse('no_auth:login'))
 

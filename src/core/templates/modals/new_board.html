@@ -1,0 +1,14 @@
+{% load static %}
+<div class="form-box" style="width: 100%; height: 100%; border-radius: 8px;">
+    <h1 class="form-title">Create a new board</h1>
+    <div class="input-container">
+        <img src="{% static 'assets/icons/tag.svg' %}" alt="Title Icon" class="input-icon">
+        <input type="text" class="input-field" id="board_title" name="board_title" placeholder="Board title" required>
+    </div>
+    <button type="submit" class="button submit-button" id="create">Create</button>
+    <script>
+        document.querySelector("#create").addEventListener("click", () => {
+            triggerMicro("{% url 'core:new_board' %}", ['board_title'], displayMessage, displayMessage);
+        });
+    </script>
+</div>

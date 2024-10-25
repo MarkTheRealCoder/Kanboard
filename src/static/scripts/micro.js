@@ -55,7 +55,7 @@ function getParams(names)
 
         if (!inputElement) {
             inputElement = document.querySelector(`#${name}`);
-            if (inputElement.tagName === 'TEXTAREA') key = 'value';
+            if (inputElement && (inputElement.tagName === 'TEXTAREA' || inputElement.tagName === 'SELECT')) key = 'value';
             else key = "textContent";
         }
 
@@ -65,6 +65,7 @@ function getParams(names)
         else {
             console.warn(`Input field with name or ID '"${name}"' not found`);
         }
+        //console.log(params);
     });
 
     return params
@@ -81,6 +82,7 @@ function sendRequest(event)
     let contentType = (is_multiparted) ? '' : 'application/x-www-form-urlencoded';
     const headers = is_multiparted ? {'X-CSRFToken': getCSRFToken()} : {'X-CSRFToken': getCSRFToken(), 'Content-Type': contentType}
 
+
     const form = (is_multiparted) ? new FormData() : new URLSearchParams(params);
     if (is_multiparted) {
         for (let param in params) {
@@ -94,6 +96,7 @@ function sendRequest(event)
         body: form
     })
     .then(response => {
+        console.log(response);
         if (response.ok) {
             if (response.redirected) {
                 window.location.href = response.url;

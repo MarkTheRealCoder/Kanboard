@@ -41,30 +41,30 @@
                     {% if user.image %}
                         <img src="{{ MEDIA_URL }}{{ user.image }}" alt="User's propic" id="propic">
                     {% else %}
-                        <img src="{% static 'assets/images/penguin.png' %}" alt="User's propic" id="propic">
+                        <img src="{% static 'assets/images/board_image_example.png' %}" alt="User's propic" id="propic">
                     {% endif %}
                     <input id="image" type="file" name="image" accept="image/*" style="display: none;">
                 </div>
                 <div class="name-surname-row">
                     <div class="input-container">
-                        <img src="../../static/assets/icons/user.svg" alt="Name Icon" class="input-icon">
+                        <img src="{% static 'assets/icons/user.svg' %}" alt="Name Icon" class="input-icon">
                         <input type="text" id="name" name="name" class="input-field" value="{{ user.name }}">
                     </div>
                     <div class="input-container">
-                        <img src="../../static/assets/icons/user.svg" alt="Surname Icon" class="input-icon" id="surname-icon">
+                        <img src="{% static 'assets/icons/user.svg' %}" alt="Surname Icon" class="input-icon" id="surname-icon">
                         <input type="text" id="surname" name="surname" class="input-field" value="{{ user.surname }}">
                     </div>
                 </div>
                 <div class="input-container">
-                    <img src="../../static/assets/icons/mail.svg" alt="Email Icon" class="input-icon">
+                    <img src="{% static 'assets/icons/mail.svg' %}" alt="Email Icon" class="input-icon">
                     <input type="email" id="email" name="email" class="input-field" value="{{ user.email }}">
                 </div>
                 <div class="input-container">
-                    <img src="../../static/assets/icons/key.svg" alt="Password Icon" class="input-icon">
+                    <img src="{% static 'assets/icons/key.svg' %}" alt="Password Icon" class="input-icon">
                     <input type="password" id="password" name="password" class="input-field" placeholder="New Password">
                 </div>
                 <div class="input-container">
-                    <img src="../../static/assets/icons/key.svg" alt="Repeat Password Icon" class="input-icon">
+                    <img src="{% static 'assets/icons/key.svg' %}" alt="Repeat Password Icon" class="input-icon">
                     <input type="password" id="repeat-password" name="repeat-password" class="input-field" placeholder="Repeat Password" required>
                 </div>
                 <p>Thanks for being a member of our community for {{ days_membership }} days!</p>

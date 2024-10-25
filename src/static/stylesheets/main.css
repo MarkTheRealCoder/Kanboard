@@ -9,7 +9,7 @@ html {
     --square-pink: rgba(209, 61, 126, 0.2);;
     --square-orange: rgba(202, 123, 80, 0.2);
     --square-green: rgba(169, 250, 146, 0.2);
-    --square-cyan: rgba(96, 234, 218, 0.2);
+    --square-cyan: rgb(96, 234, 218);
 
     --button-green: #388f64;
     --button-green-hover: #167e50;

@@ -35,11 +35,11 @@
             <form action="submit/" method="post">
                 {% csrf_token %}
                 <div class="input-container">
-                    <img src="../../static/assets/icons/tag.svg" alt="Email Icon" class="input-icon">
+                    <img src="{% static 'assets/icons/tag.svg' %}" alt="Email Icon" class="input-icon">
                     <input type="text" id="email" name="key" class="input-field" placeholder="Email or Username" required>
                 </div>
                 <div class="input-container">
-                    <img src="../../static/assets/icons/key.svg" alt="Password Icon" class="input-icon">
+                    <img src="{% static 'assets/icons/key.svg' %}" alt="Password Icon" class="input-icon">
                     <input type="password" id="password" name="password" class="input-field" placeholder="Password" required>
                 </div>
                 <button type="submit" class="submit-button" onclick="triggerMicro('submit/', ['key', 'password'], displayMessage, displayMessage);">Log In</button>

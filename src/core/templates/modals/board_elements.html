@@ -1,0 +1,62 @@
+{% load static %}
+<div id="column-modal-wrapper"><div id="column-modal-panel"></div></div>
+{% for column in columns %}
+    <div class="board-silhouette column-silhouette modable" draggable="true" style="border-color: {{ column.color }}">
+        <button class="deleting-button" style="border-color: {{ column.color }};">
+            <a href="{% url 'core:remove_column_modal' board_id=board.id column_id=column.id %}" style="display: none;"></a>
+            <img src="{% static 'assets/icons/trash.svg' %}" alt="Delete column" class="filter-white">
+        </button>
+        <div class="sticky-title">
+            <h2>{{ column.title }}</h2>
+            <p>{{ column.card_count }} cards</p>
+        </div>
+        <data value="{{ column.id }}" style="display: none;"></data>
+        <a class="column-modal-href" href="{% url 'core:update_column_modal' board_id=board.id column_id=column.id %}" style="display: none;"></a>
+        <hr style="background-color: {{ column.color }}">
+        <div class="card-container">
+            <div class="overflow-container">
+                {% for card in column.cards %}
+                    <div class="card-silhouette" draggable="true" style="border-color: {{ card.color }}">
+                        <data value="{{ card.id }}" style="display: none;"></data>
+                        <a class="card-modal-href" href="{% url 'core:update_card_modal' board_id=board.id card_id=card.id %}" style="display: none;"></a>
+                        <div class="non-sticky-title">
+                            <h4>{{ card.title }}</h4>
+                            {% if card.is_expired %}
+                                <div class="filter-red expired" title="This card is expired in {{ card.expiration_date|date:"Y-m-d" }}.">
+                                    <img src="{% static 'assets/icons/alert.svg' %}" alt="Alert icon">
+                                </div>
+                            {% elif card.completion_date %}
+                                <div class="filter-green expired" title="This card has been completed in {{ card.completion_date|date:"Y-m-d" }}.">
+                                    <img src="{% static 'assets/icons/checkmark.svg' %}" alt="Alert icon">
+                                </div>
+                            {% elif card.expiration_date %}
+                                <div class="filter-green expired" title="This card will expire in {{ card.expiration_date|date:"Y-m-d" }}.">
+                                    <img src="{% static 'assets/icons/calendar.svg' %}" alt="Alert icon">
+                                </div>
+                            {% else %}
+                                <div class="filter-green expired" title="This card will never expire.">
+                                    <img src="{% static 'assets/icons/calendar.svg' %}" alt="Alert icon">
+                                </div>
+                            {% endif %}
+                        </div>
+                        <hr style="background-color: {{ card.color }}">
+                        <p class="stabilize">{{ card.description }}</p>
+                        <hr style="background-color: {{ card.color }}">
+                        <div class="card-bottom">
+                            <div class="card-assignees">
+                                {% for assignee in card.assignees %}
+                                    {% if assignee.image %}
+                                        <img src="{{ MEDIA_URL }}{{ assignee.image }}" alt="User's picture" title="{{ assignee.username }}">
+                                    {% else %}
+                                        <img src="{% static 'assets/icons/user.svg' %}" class="filter-white" alt="User's picture" title="{{ assignee.username }}">
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            <p><b>{{ card.story_points }}</b> story points</p>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+{% endfor %}
