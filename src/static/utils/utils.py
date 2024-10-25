@@ -15,51 +15,182 @@ response_success = lambda message: JsonResponses.response(JsonResponses.SUCCESS,
 
 
 def get_user_from(request: HttpRequest) -> str:
+    """
+    Gets the user from the request session.
+
+    :param request: The request object.
+    :returns: The user's UUID.
+    """
     return request.session.get('uuid', None)
 
 
-def check_user_invalid(user: str) -> bool:
-    return user is None
+def check_user_invalid(uuid: str) -> bool:
+    """
+    Checks if the user is invalid.
 
-
-def get_board(board, board_id: int) -> Board:
-    return board.objects.filter(id=board_id).first()
-
-
-def get_user(user, user_id: str) -> User:
-    return user.objects.filter(uuid=user_id).first()
-
-
-def get_user_by_username(user, username: str) -> User:
-    return user.objects.filter(username=username).first()
-
-
-def is_owner_of_board(board, user: str, board_id: int) -> bool:
-    return board.objects.filter(id=board_id, owner=user).first()
+    :param uuid: The user's UUID to check.
+    :returns: The sum of the two input integers.
+    """
+    return uuid is None
 
 
 def check_board_invalid(board: Board) -> bool:
+    """
+    Checks if the board is invalid (None).
+
+    :param board: The board object.
+    :return: True if the board is invalid, False otherwise.
+    """
     return board is None
 
 
-def check_user_not_owner(board, user: str) -> bool:
-    return not board.objects.filter(owner_id=user).exists()
+def get_board(board, board_id: int, owner: str = None) -> Board or None:
+    """
+    Gets the Board by the board_id from the model.
 
+    :param board: The board model.
+    :param board_id: The board's ID.
+    :param owner: The board's owner.
+    :return: The board object, None otherwise.
+    """
+    keywords = { 'id': board_id }
 
-def check_user_not_guest(guest, user: str, board_id: int) -> bool:
-    return not guest.objects.filter(user_id=user, board_id=board_id).exists()
+    if owner:
+        keywords['owner'] = owner
 
-
-def check_user_not_owner_or_guest(board, guest, user: str, board_id: int) -> bool:
-    return check_user_not_owner(board, user) and check_user_not_guest(guest, user, board_id)
+    return board.objects.filter(**keywords).first()
 
 
 def get_cards_of_board(card, board_id: int) -> QuerySet[Card]:
+    """
+    Gets the cards of the board.
+
+    :param card: The card model.
+    :param board_id: The board's ID.
+    :return: The cards of the board.
+    """
     return card.objects.filter(board_id=board_id)
 
 
 def get_expired_cards_of_board(card, board_id: int) -> QuerySet[Card]:
-    return card.objects.filter(board_id=board_id, expiration_date__lt=timezone.now())
+    """
+    Gets the expired cards of the board.
 
-def no_timezone(dt):
+    :param card: The card model.
+    :param board_id: The board's ID.
+    :return: The expired cards of the board.
+    """
+    return get_cards_of_board(card, board_id).filter(expiration_date__lt=datetime.now())
+
+
+def get_user(user, uuid: str = None, username: str = None) -> User or None:
+    """
+    Gets the User by the user_id OR by the username from the model.
+
+    :param user: The user model.
+    :param uuid: The user's UUID.
+    :param username: The user's username.
+    :return: The user object.
+    """
+    keywords = {}
+
+    if uuid:
+        keywords = { 'uuid': uuid }
+
+    if username:
+        keywords = { 'username': username }
+
+    return user.objects.filter(**keywords).first()
+
+
+def get_guest(guest, board_id: int, uuid: str) -> Guest or None:
+    """
+    Gets the Guest by the user and board_id from the model.
+
+    :param guest: The guest model.
+    :param uuid: The user's UUID.
+    :param board_id: The board's ID.
+    :return: The guest object, None otherwise.
+    """
+    return guest.objects.filter(user_id=uuid, board_id=board_id).first()
+
+
+def check_user_not_owner(board, board_id: int, uuid: str) -> bool:
+    """
+    Checks if the user is not the owner of the board.
+
+    :param board: The board model.
+    :param board_id: The board's ID.
+    :param uuid: The user's UUID.
+    :return: True if the user is not the owner, False otherwise.
+    """
+    return get_board(board, board_id, uuid) is None
+
+
+def check_user_not_guest(guest, board_id: int, uuid: str) -> bool:
+    """
+    Checks if the user is not a guest of the board.
+
+    :param guest: The guest model.
+    :param uuid: The user's UUID.
+    :param board_id: The board's ID.
+    :return: True if the user is not a guest, False otherwise.
+    """
+    return get_guest(guest, board_id, uuid) is None
+
+
+def check_user_not_owner_or_guest(board, guest, board_id: int, uuid: str) -> bool:
+    """
+    Checks if the user is not the owner or a guest of the board.
+
+    :param board: The board model.
+    :param guest: The guest model.
+    :param uuid: The user's UUID.
+    :param board_id: The board's ID.
+    :return: True if the user is not the owner or a guest, False otherwise.
+    """
+    return check_user_not_owner(board, board_id, uuid) and check_user_not_guest(guest, board_id, uuid)
+
+
+def get_columns(column, board_id: int) -> QuerySet[Card]:
+    """
+    Gets the columns of the board.
+
+    :param column: The column model.
+    :param board_id: The board's ID.
+    :return: The columns of the board.
+    """
+    return column.objects.filter(board_id=board_id).all()
+
+
+def get_cards(card, column_id: int) -> QuerySet[Card]:
+    """
+    Gets the cards of the column.
+
+    :param card: The card model.
+    :param column_id: The column's ID.
+    :return: The cards of the column.
+    """
+    return card.objects.filter(column_id=column_id).all()
+
+
+def get_boards_owned(board, uuid: str) -> QuerySet[Board]:
+    """
+    Gets the boards owned by the user.
+
+    :param board: The board model.
+    :param uuid: The user's UUID.
+    :return: The boards owned by the user.
+    """
+    return board.objects.filter(owner=uuid).all()
+
+
+def no_timezone(dt: datetime) -> datetime:
+    """
+    Removes the timezone from the datetime object.
+
+    :param dt: The datetime object.
+    :return: The datetime object without timezone.
+    """
     return dt.replace(tzinfo=None)
+
