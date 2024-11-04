@@ -215,7 +215,7 @@ def burndown_image_view(request, board_id):
 @requires_csrf_token
 def new_board(request):
     """
-    Renders the create board page with the user details.
+    Creates a new board for the logged-in user.
     Requires the method to be POST and the user to be authenticated.
 
     :param request: HttpRequest - The HTTP request object.
@@ -303,7 +303,7 @@ def new_column(request, board_id):
 @requires_csrf_token
 def new_card(request, board_id):
     """
-    Creates a new column for the logged-in user.
+    Creates a new card for the logged-in user.
     :param request: HttpRequest - The HTTP request object.
     :param uuid: str - The UUID of the authenticated user passed by the RequestHandler.
     :return: JsonResponse - The JSON response with the result of the operation.
@@ -438,7 +438,7 @@ def update_column(request, board_id, column_id):
         return response_error("Board not found.")
 
     if check_user_not_owner_or_guest(Board, Guest, board_id, uuid):
-        return response_error("You are not the owner of this board.")
+        return response_error("You don't have access to this board.")
 
     if not column:
         return response_error("Column not found.")
@@ -477,6 +477,15 @@ def update_column(request, board_id, column_id):
 
 @HANDLER.bind("board_update_elements", "board/<int:board_id>/update/elements/", session=True, request="POST")
 def update_board_elements(request, board_id):
+    """
+    Updates the board elements (columns and cards).
+    Requires the method to be POST and the user to be authenticated.
+
+    :param request: HttpRequest - The HTTP request object.
+    :param board_id: int - The ID of the board to update.
+    :return: JsonResponse - The JSON response with the result of the operation.
+    """
+
     uuid = get_user_from(request)
     if check_user_not_owner_or_guest(Board, Guest, board_id, uuid):
         return response_error("You do not have access to this board.")
@@ -503,6 +512,14 @@ def update_board_elements(request, board_id):
 
 @HANDLER.bind("board_update_sync", "board/<int:board_id>/update/sync/", session=True, request="GET")
 def sync_board(request, board_id):
+    """
+    Synchronizes the board elements (columns and cards).
+    Requires the method to be GET and the user to be authenticated.
+
+    :param request: HttpRequest - The HTTP request object.
+    :param board_id: int - The ID of the board to synchronize.
+    :return: JsonResponse - The JSON response with the result of the operation.
+    """
     uuid = get_user_from(request)
     if check_user_not_owner_or_guest(Board, Guest, board_id, uuid):
         return response_error("You do not have access to this board.")
@@ -515,6 +532,15 @@ def sync_board(request, board_id):
 @HANDLER.bind("update_card", "board/<int:board_id>/card/<int:card_id>/update/", request="POST", session=True)
 @requires_csrf_token
 def update_card(request, board_id, card_id):
+    """
+    Updates the card details.
+    Requires the method to be POST and the user to be authenticated.
+
+    :param request: HttpRequest - The HTTP request object.
+    :param board_id: int - The ID of the board to update.
+    :param card_id: int - The ID of the card to update.
+    :return: JsonResponse - The JSON response with the result of the operation.
+    """
     uuid = get_user_from(request)
     user = get_user(User, uuid)
     if not user:
@@ -542,6 +568,8 @@ def update_card(request, board_id, card_id):
     }
     assignees = {}
 
+    # Get the updates from the POST request and assign them to the updates dictionary.
+    # If the key is assignee_*, then it is an assignee update, so it is added to the assignees dictionary.
     for key in request.POST.keys():
         if key in updates.keys():
             updates[key] = request.POST.get(key)
@@ -555,6 +583,7 @@ def update_card(request, board_id, card_id):
     except ModelsAttributeError as e:
         return response_error(f"Could not update this card: {e}")
 
+    # Update the card with the new values.
     try:
         if title := updates.get('card_title', None):
             card.title = title
@@ -567,7 +596,6 @@ def update_card(request, board_id, card_id):
         if story_points := updates.get('story_points', None):
             card.story_points = story_points
         if completed := updates.get('completed', None):
-            print(completed)
             if completed == "true":
                 completed = no_timezone(datetime.now())
                 card.completion_date = completed
@@ -575,10 +603,10 @@ def update_card(request, board_id, card_id):
                 card.completion_date = None
         card.save()
 
+        # Update the assignees of the card.
         users = {get_user(User, username=assignee): False if value == "false" else True for assignee, value in assignees.items()}
         for assignee, value in users.items():
             if not assignee:
-                print(assignee)
                 continue
             params = {"card_id":card, "user_id":assignee, "board_id":board}
             exists = Assignee.objects.filter(**params).exists()
@@ -596,6 +624,14 @@ def update_card(request, board_id, card_id):
 @HANDLER.bind("remove_board", "dashboard/remove/board/<int:board_id>/", request="POST", session=True)
 @requires_csrf_token
 def remove_board(request, board_id):
+    """
+    Removes a board from the database.
+    Requires the method to be POST and the user to be authenticated.
+
+    :param request: HttpRequest - The HTTP request object.
+    :param board_id: int - The ID of the board to remove.
+    :return: JsonResponse - The JSON response with the result of the operation.
+    """
 
     uuid = get_user_from(request)
     user = get_user(User, uuid)
@@ -618,6 +654,17 @@ def remove_board(request, board_id):
 @HANDLER.bind("remove_column", "board/<int:board_id>/remove/column/<int:column_id>/", request="POST", session=True)
 @requires_csrf_token
 def remove_column(request, board_id, column_id):
+    """
+    Removes a column from the board.
+    Requires the method to be POST and the user to be authenticated.
+
+    Removing a column will eventually remove all the cards in that column.
+
+    :param request: HttpRequest - The HTTP request object.
+    :param board_id: int - The ID of the board where the column will be removed.
+    :param column_id: int - The ID of the column to remove.
+    :return: JsonResponse - The JSON response with the result of the operation.
+    """
 
     uuid = get_user_from(request)
     user = get_user(User, uuid)
@@ -641,7 +688,7 @@ def remove_column(request, board_id, column_id):
     try:
         column.delete()
     except Exception as e:
-        return response_error(f"Couldn't delete the board: {e}")
+        return response_error(f"Couldn't delete the column: {e}")
 
     return response_success("Column deleted successfully.")
 
@@ -649,6 +696,16 @@ def remove_column(request, board_id, column_id):
 @HANDLER.bind("remove_card", "board/<int:board_id>/remove/card/<int:card_id>/", request="POST", session=True)
 @requires_csrf_token
 def remove_card(request, board_id, card_id):
+    """
+    Removes a card from the board.
+    Requires the method to be POST and the user to be authenticated.
+
+    :param request: HttpRequest - The HTTP request object.
+    :param board_id: int - The ID of the board where the card will be removed.
+    :param card_id: int - The ID of the card to remove.
+    :return: JsonResponse - The JSON response with the result of the operation.
+    """
+
     uuid = get_user_from(request)
     user = get_user(User, uuid)
     board = get_board(Board, board_id)
@@ -679,8 +736,9 @@ def remove_card(request, board_id, card_id):
 @requires_csrf_token
 def remove_user_view(request, board_id):
     """
-    Executes the query to remove a user from a board using the username, but only if the current user is authenticated
-    and is the owner of the board.
+    Executes the query to remove a user from a board using the username, but only if the requester is authenticated
+    and owns the board.
+
     :param request: HttpRequest - The HTTP request object.
     :param board_id: int - The ID of the board from which the user will be removed.
     :return: JsonResponse - The JSON response with the result of the operation.
@@ -728,7 +786,7 @@ def new_column_modal(request, board_id):
     """
     uuid = get_user_from(request)
     if check_user_not_owner(Board, board_id, uuid):
-        return response_error("You do not have access to this board.")
+        return response_error("You are not the owner of this board.")
 
     modal = render(request, "modals/new_column.html", {'board_id': board_id})
     return HttpResponse(modal)
@@ -774,6 +832,10 @@ def update_column_modal(request, board_id, column_id):
 
     board = get_board(Board, board_id)
     column = Column.objects.filter(id=column_id, board_id=board).first()
+
+    if not column:
+        return response_error("Column not found.")
+
     arguments = {'board_id': board_id, 'column_id': column_id}
 
     modal = render(request, "modals/update_column.html", {
@@ -868,7 +930,7 @@ def remove_column_modal(request, board_id, column_id):
     uuid = get_user_from(request)
 
     if check_user_not_owner(Board, board_id, uuid):
-        return response_error("You are not allowed to invite someone to this board. You are not the Owner!")
+        return response_error("You are not allowed to remove a column from this board. You are not the Owner!")
 
     board = get_board(Board, board_id)
     title = Column.objects.filter(id=column_id, board_id=board).first().title
@@ -916,6 +978,15 @@ def remove_card_modal(request, board_id, card_id):
 @HANDLER.bind("manage_assignees", "board/<int:board_id>/new/user/", request="POST", session=True)
 @requires_csrf_token
 def invite_user(request, board_id):
+    """
+    Adds a new user to the board by username.
+    Requires the method to be POST and the user to be authenticated.
+
+    :param request: HttpRequest - The HTTP request object.
+    :param board_id: int - The ID of the board where the user will be invited.
+    :return: JsonResponse - The JSON response with the result of the operation.
+    """
+
     uuid = get_user_from(request)
     board = get_board(Board, board_id)
 
@@ -973,9 +1044,15 @@ def invite_user_modal(request, board_id):
 @HANDLER.bind("acceptance_deletion", "acceptance/delete/", request="GET", session=False)
 @requires_csrf_token
 def acceptance_deletion(request):
+    """
+    Deletes the acceptance user and logs out.
+    This is used for acceptance testing purposes.
+
+    :param request: HttpRequest - The HTTP request object.
+    :return: HttpResponse - The redirection to the login page.
+    """
 
     User.objects.filter(username="acceptancetest").delete()
-    # Board.objects.filter(name="Acceptance Board").delete()
 
     request.session.flush()
     print("Deleted acceptance user.")
