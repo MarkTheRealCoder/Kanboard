@@ -3,7 +3,8 @@ from datetime import datetime
 from io import BytesIO
 from uuid import uuid4
 
-from django.db.models import F, Sum
+from django.db.models import F, Sum, Value
+from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse
@@ -120,7 +121,7 @@ def burndown_view(request, board_id):
             self.expired_cards = cards.filter(expiration_date__lt=no_timezone(datetime.now()), completion_date__isnull=True).count()
             self.completed_cards = cards.filter(completion_date__isnull=False).count()
             self.total_cards = cards.count()
-            self.story_points = cards.aggregate(total_story_points=Sum(F('story_points')))['total_story_points']
+            self.story_points = cards.aggregate(total_story_points=Coalesce(Sum(F('story_points')), Value(0)))['total_story_points']
 
     # column cards
     columns = get_columns(Column, board_id)
@@ -134,10 +135,10 @@ def burndown_view(request, board_id):
     return render(request, 'burndown.html', {
         'board': board,
         'columns': columns,
-        'total_active_cards': total_cards,
+        'total_active_cards': total_active_cards,
         'total_expired_cards': total_expired_cards,
         'total_completed_cards': total_completed_cards,
-        'total_cards': total_story_points,
+        'total_cards': total_cards,
         'total_story_points': total_story_points,
     })
 
