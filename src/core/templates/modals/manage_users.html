@@ -34,12 +34,14 @@
             }, 1000);
         });
 
-        document.querySelector('.user-field').addEventListener('click', (event) => {
-            const target = $(event.target);
-            let parent = $(event.target).parents("#assigned-users");
-            if (parent.length > 0) parent = $('#kanboard-users')
-            else parent = $('#assigned-users')
-            $(parent).append($(target));
+        document.querySelectorAll(".user-field").forEach((user) => {
+            user.addEventListener('click', (event) => {
+                const target = $(event.target);
+                let parent = $(event.target).parents("#assigned-users");
+                if (parent.length > 0) parent = $('#kanboard-users')
+                else parent = $('#assigned-users')
+                $(parent).append($(target));
+            });
         });
 
     </script>

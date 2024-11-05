@@ -15,6 +15,13 @@ HANDLER = RequestHandler()
 @HANDLER.bind("registration_submission", "register/submit/", request="POST", session=False)
 @requires_csrf_token
 def registration_submission(request):
+    """
+    Registers a new user to the database.
+    Requires the request to be POST.
+
+    :param request: HttpRequest - The HTTP request object.
+    :return: HttpResponse - The rendered 'dashboard' HTML page.
+    """
 
     required_fields = {
         'name': request.POST.get('name', None),
@@ -42,6 +49,13 @@ def registration_submission(request):
 @HANDLER.bind("login_submission", "login/submit/", request="POST", session=False)
 @requires_csrf_token
 def login_submission(request):
+    """
+    Logs in an existing user to the dashboard.
+    Requires the request to be POST.
+
+    :param request: HttpRequest - The HTTP request object.
+    :return: HttpResponse - The rendered 'dashboard' HTML page.
+    """
 
     field = 'email'
     key = request.POST.get('key', None)
@@ -76,6 +90,13 @@ def login_submission(request):
 @HANDLER.bind('user_management', 'account/changes/', request="POST", session=True)
 @requires_csrf_token
 def user_management(request):
+    """
+    Updates the user details in the database.
+    Requires the user to be logged in and the request to be POST.
+
+    :param request: HttpRequest - The HTTP request object.
+    :return: HttpResponse - The rendered 'profile' HTML page
+    """
 
     uuid = get_user_from(request)
     user = get_user(User, uuid)
@@ -124,6 +145,13 @@ def user_management(request):
 @HANDLER.bind('logout', 'logout/', request='POST', session=True)
 @requires_csrf_token
 def logout(request): # Working view
+    """
+    Logs out the user flushing his session's data.
+    Requires the request to be POST and the user to be logged in.
+
+    :param request: HttpRequest - The HTTP request object.
+    :return: HttpResponse - The rendered 'login' HTML page.
+    """
     request.session.flush()
     return redirect(reverse('no_auth:login'))
 
@@ -133,6 +161,8 @@ def logout(request): # Working view
 def profile(request):
     """
     Executes the query to retrieve user details after login.
+    Requires the request to be GET and the user to be logged in.
+
     :param request: HttpRequest - The HTTP request object.
     :return: HttpResponse - The rendered HTML page with user details.
     """

@@ -2,6 +2,13 @@ import re
 
 
 class ModelsAttributeError(Exception):
+    """
+    Custom exception class for model attribute errors.
+    The exception is raised when a model attribute is invalid.
+
+    The exception is raised with a message and a reason.
+    The reason is a shadow-type integer that represents the type of error.
+    """
     class Reason(int):
         pass
 
@@ -9,6 +16,8 @@ class ModelsAttributeError(Exception):
     EXISTENCE = Reason(2)
 
     def __init__(self, msg: str = "", reason: Reason = PATTERN):
+        if not isinstance(reason, self.Reason):
+            raise ValueError("Invalid reason type")
         self.___reason: 'Reason' = reason
         super().__init__(msg)
 
@@ -37,6 +46,11 @@ class UserValidations:
         self.___surname = kwargs.get('surname', None)
 
     def generate_uuid(self) -> str:
+        """
+        Generate a unique identifier for the user.
+
+        :return: the unique identifier.
+        """
         import uuid
         return uuid.uuid4().hex
 

@@ -181,6 +181,7 @@ class DragAndDrop {
                         target.id = 'dragged';
                     }
                 }
+                console.log(`Dragged: ${currentElement}`);
             }
         });
 
@@ -203,10 +204,12 @@ class DragAndDrop {
             if (element === "empty") element = hovered.element;
             this.placePlaceholder(element, type, boa);
 
+            console.log(`Hovered: ${element}`);
+
         });
 
         document.addEventListener('dragend', function (event) {
-
+            console.log("Drag end event");
         });
 
         document.addEventListener('drop', (event) => {
